@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Navigation } from 'lucide-react';
+import { Calendar, MapPin, Navigation, Clock, Users } from 'lucide-react';
 import Banner3 from '../assets/Banner3.png';
 
 declare global {
@@ -29,12 +29,37 @@ const Homepage: React.FC = () => {
     const [distance, setDistance] = useState<number | null>(null);
     const [duration, setDuration] = useState<string | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
+    const [selectedTime, setSelectedTime] = useState('10:00');
+    const [numberOfPersons, setNumberOfPersons] = useState(1);
 
     // Refs for Google Places Autocomplete
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
     const pickupAutocompleteRef = useRef<any>(null);
     const dropoffAutocompleteRef = useRef<any>(null);
+
+    // Generate time slots (every 15 minutes)
+    const generateTimeSlots = () => {
+        const times: string[] = [];
+        for (let hour = 0; hour < 24; hour++) {
+            for (let minute = 0; minute < 60; minute += 15) {
+                const h = hour.toString().padStart(2, '0');
+                const m = minute.toString().padStart(2, '0');
+                times.push(`${h}:${m}`);
+            }
+        }
+        return times;
+    };
+
+    const formatTime12Hour = (time24: string) => {
+        const [hours, minutes] = time24.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        return `${hour12}:${minutes} ${ampm}`;
+    };
+
+    const timeSlots = generateTimeSlots();
 
     // Initialize Google Maps Places Autocomplete
     useEffect(() => {
@@ -157,13 +182,11 @@ const Homepage: React.FC = () => {
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate inputs
         if (!pickupLocation || !dropoffLocation) {
             alert('Please select both pickup and dropoff locations');
             return;
         }
 
-        // Navigate to taxi options page with search params
         navigate('/taxi-options', {
             state: {
                 from: pickupLocation,
@@ -173,7 +196,8 @@ const Homepage: React.FC = () => {
                 distance: distance,
                 duration: duration,
                 date: formatDate(selectedDate),
-                time: '10:00 AM'
+                time: formatTime12Hour(selectedTime),
+                passengers: numberOfPersons
             }
         });
     };
@@ -183,13 +207,6 @@ const Homepage: React.FC = () => {
         const day = String(date.getDate()).padStart(2, '0');
         const year = date.getFullYear();
         return `${month}/${day}/${year}`;
-    };
-
-    const formatDisplayDate = (date: Date): string => {
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-        return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
     };
 
     const handleDateClick = (date: Date) => {
@@ -247,7 +264,7 @@ const Homepage: React.FC = () => {
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-screen py-8 lg:py-12 mt-10">
                     {/* Left Column - Booking Form */}
                     <div className="max-w-md w-full mx-auto lg:mx-0 order-2 lg:order-1">
-                        <div className="mb-10 lg:mb-14">
+                        <div className="mb-6 lg:mb-8">
                             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 mb-4 leading-tight">
                                 Make Your
                                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-orange-600 to-amber-600">
@@ -256,17 +273,16 @@ const Homepage: React.FC = () => {
                             </h1>
                         </div>
 
-                        <form onSubmit={handleSearch} className="space-y-6 lg:space-y-7">
+                        <form onSubmit={handleSearch} className="space-y-4">
                             {/* Pickup Location */}
                             <div className="group">
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between mb-2">
                                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                                         <div className="p-1.5 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg border border-orange-200">
                                             <MapPin className="h-4 w-4 text-orange-600" />
                                         </div>
                                         Pickup Location
                                     </label>
-                                    {/* <span className="text-xs text-gray-500 font-medium">Required</span> */}
                                 </div>
                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                     <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -285,14 +301,13 @@ const Homepage: React.FC = () => {
 
                             {/* Dropoff Location */}
                             <div className="group">
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between mb-2">
                                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                                         <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
                                             <MapPin className="h-4 w-4 text-blue-600" />
                                         </div>
                                         Destination
                                     </label>
-                                    {/* <span className="text-xs text-gray-500 font-medium">Required</span> */}
                                 </div>
                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -342,134 +357,198 @@ const Homepage: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Date Selection */}
-                            <div className="group relative">
-                                <div className="flex items-center justify-between mb-3">
-                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                        <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
-                                            <Calendar className="h-4 w-4 text-purple-600" />
-                                        </div>
-                                        Travel Date
-                                    </label>
-                                    {/* <span className="text-xs text-gray-500 font-medium">Optional</span> */}
-                                </div>
-                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowDatePicker(!showDatePicker)}
-                                        className="relative w-full py-4 pl-12 pr-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
-                                    >
-                                        <div className="text-gray-700 font-medium">
-                                            {formatDisplayDate(selectedDate)}
-                                        </div>
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-purple-500 transition-colors duration-200" />
-                                    </button>
-                                </div>
+                            {/* Date and Time Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                {/* Date Selection */}
+                                <div className="group relative">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                            <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
+                                                <Calendar className="h-4 w-4 text-purple-600" />
+                                            </div>
+                                            Travel Date
+                                        </label>
+                                    </div>
+                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDatePicker(!showDatePicker)}
+                                            className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
+                                        >
+                                            <div className="text-gray-700 font-medium text-sm">
+                                                {selectedDate.getDate()}/{selectedDate.getMonth() + 1}/{selectedDate.getFullYear().toString().slice(-2)}
+                                            </div>
+                                        </button>
+                                    </div>
 
-                                {/* Date Picker Dropdown */}
-                                {showDatePicker && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown">
-                                        {/* Header */}
-                                        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                                            <button
-                                                type="button"
-                                                onClick={previousMonth}
-                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                </svg>
-                                            </button>
+                                    {/* Date Picker Dropdown */}
+                                    {showDatePicker && (
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown min-w-[300px]">
+                                            {/* Header */}
+                                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={previousMonth}
+                                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                >
+                                                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                    </svg>
+                                                </button>
 
-                                            <div className="text-center">
-                                                <h3 className="text-lg font-bold text-gray-900">
-                                                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                                                </h3>
+                                                <div className="text-center">
+                                                    <h3 className="text-lg font-bold text-gray-900">
+                                                        {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                                                    </h3>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={nextMonth}
+                                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                >
+                                                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                    </svg>
+                                                </button>
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={nextMonth}
-                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                            >
-                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
-                                        </div>
+                                            {/* Day headers */}
+                                            <div className="grid grid-cols-7 gap-2 mb-2">
+                                                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                    <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
+                                                        {day}
+                                                    </div>
+                                                ))}
+                                            </div>
 
-                                        {/* Day headers */}
-                                        <div className="grid grid-cols-7 gap-2 mb-2">
-                                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                                                <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
-                                                    {day}
-                                                </div>
-                                            ))}
-                                        </div>
+                                            {/* Calendar grid */}
+                                            <div className="grid grid-cols-7 gap-2">
+                                                {calendarDays.map((date, index) => {
+                                                    if (!date) {
+                                                        return <div key={`empty-${index}`} className="aspect-square" />;
+                                                    }
 
-                                        {/* Calendar grid */}
-                                        <div className="grid grid-cols-7 gap-2">
-                                            {calendarDays.map((date, index) => {
-                                                if (!date) {
-                                                    return <div key={`empty-${index}`} className="aspect-square" />;
-                                                }
+                                                    const isToday = date.toDateString() === new Date().toDateString();
+                                                    const isPast = isPastDate(date);
+                                                    const isSelected = isDateSelected(date);
 
-                                                const isToday = date.toDateString() === new Date().toDateString();
-                                                const isPast = isPastDate(date);
-                                                const isSelected = isDateSelected(date);
-
-                                                return (
-                                                    <button
-                                                        key={index}
-                                                        type="button"
-                                                        onClick={() => !isPast && handleDateClick(date)}
-                                                        disabled={isPast}
-                                                        className={`
+                                                    return (
+                                                        <button
+                                                            key={index}
+                                                            type="button"
+                                                            onClick={() => !isPast && handleDateClick(date)}
+                                                            disabled={isPast}
+                                                            className={`
                                                             aspect-square rounded-lg text-sm font-medium transition-all duration-200
                                                             ${isPast
-                                                                ? 'text-gray-300 cursor-not-allowed'
-                                                                : 'hover:bg-purple-50 cursor-pointer'
-                                                            }
+                                                                    ? 'text-gray-300 cursor-not-allowed'
+                                                                    : 'hover:bg-purple-50 cursor-pointer'
+                                                                }
                                                             ${isSelected
-                                                                ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
-                                                                : 'text-gray-700'
-                                                            }
+                                                                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
+                                                                    : 'text-gray-700'
+                                                                }
                                                             ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
                                                         `}
-                                                    >
-                                                        {date.getDate()}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                                                        >
+                                                            {date.getDate()}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
 
-                                        {/* Footer */}
-                                        <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedDate(new Date());
-                                                    setCurrentMonth(new Date());
-                                                }}
-                                                className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
-                                            >
-                                                Today
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowDatePicker(false)}
-                                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
-                                            >
-                                                Done
-                                            </button>
+                                            {/* Footer */}
+                                            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedDate(new Date());
+                                                        setCurrentMonth(new Date());
+                                                    }}
+                                                    className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                                                >
+                                                    Today
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowDatePicker(false)}
+                                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
+                                                >
+                                                    Done
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Time Selection */}
+                                <div className="group">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                            <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                <Clock className="h-4 w-4 text-blue-600" />
+                                            </div>
+                                            Time
+                                        </label>
+                                    </div>
+                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                        <select
+                                            value={selectedTime}
+                                            onChange={(e) => setSelectedTime(e.target.value)}
+                                            className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 transition-all duration-200 appearance-none cursor-pointer font-medium text-sm"
+                                        >
+                                            {timeSlots.map((time) => (
+                                                <option key={time} value={time}>
+                                                    {formatTime12Hour(time)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </div>
                                     </div>
-                                )}
+                                </div>
+                            </div>
+
+                            {/* Number of Persons */}
+                            <div className="group">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                        <div className="p-1.5 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-200">
+                                            <Users className="h-4 w-4 text-green-600" />
+                                        </div>
+                                        Number of Passengers
+                                    </label>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNumberOfPersons(Math.max(1, numberOfPersons - 1))}
+                                        className="w-12 h-12 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-xl text-gray-700 hover:text-green-600"
+                                    >
+                                        −
+                                    </button>
+                                    <div className="flex-1 text-center">
+                                        <div className="text-3xl font-bold text-gray-900">{numberOfPersons}</div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {numberOfPersons === 1 ? 'Passenger' : 'Passengers'}
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNumberOfPersons(Math.min(8, numberOfPersons + 1))}
+                                        className="w-12 h-12 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-xl text-gray-700 hover:text-green-600"
+                                    >
+                                        +
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Search Button */}
-                            <div className="pt-2">
+                            <div className="pt-1">
                                 <button
                                     type="submit"
                                     className="group relative w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-4 px-6 rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 overflow-hidden"
@@ -489,7 +568,7 @@ const Homepage: React.FC = () => {
                         </form>
 
                         {/* Trust indicators */}
-                        <div className="mt-10 pt-8 border-t border-gray-100">
+                        <div className="mt-6 pt-6 border-t border-gray-100">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="flex -space-x-2">
