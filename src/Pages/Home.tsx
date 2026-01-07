@@ -10,11 +10,12 @@ const CompletePage: React.FC = () => {
         <div className="min-h-screen">
             {/* Hero Section with Booking Form */}
             <Homepage />
-            {/* Features Section */}
-            <Features />
 
             {/* Popular Cars Section */}
             <PopularCars />
+            
+            {/* Features Section */}
+            <Features />
 
             {/* How It Works Section */}
             <HowItWorks />

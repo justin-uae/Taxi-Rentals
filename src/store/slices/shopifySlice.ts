@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import { shopifyClient } from '../../services/shopifyClient';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { fetchTaxiProducts as fetchProducts, fetchProductById as getProductById } from '../../services/shopifyClient';
 import type { TaxiOption } from '../../types';
 
 interface ShopifyState {
@@ -21,7 +21,7 @@ export const fetchTaxiProducts = createAsyncThunk(
     'shopify/fetchTaxiProducts',
     async (_, { rejectWithValue }) => {
         try {
-            const products = await shopifyClient.fetchProducts();
+            const products = await fetchProducts();
             return products;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to fetch products');
@@ -34,7 +34,7 @@ export const fetchProductById = createAsyncThunk(
     'shopify/fetchProductById',
     async (productId: string, { rejectWithValue }) => {
         try {
-            const product = await shopifyClient.fetchProductById(productId);
+            const product = await getProductById(productId);
             return product;
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to fetch product');
@@ -61,7 +61,7 @@ const shopifySlice = createSlice({
                 state.loading = true;
                 state.error = null;
             })
-            .addCase(fetchTaxiProducts.fulfilled, (state, action: PayloadAction<TaxiOption[]>) => {
+            .addCase(fetchTaxiProducts.fulfilled, (state, action) => {
                 state.loading = false;
                 state.products = action.payload;
                 state.initialized = true;
@@ -77,14 +77,17 @@ const shopifySlice = createSlice({
                 state.loading = true;
                 state.error = null;
             })
-            .addCase(fetchProductById.fulfilled, (state, action: PayloadAction<TaxiOption>) => {
+            .addCase(fetchProductById.fulfilled, (state, action) => {
                 state.loading = false;
-                // Update or add the product
-                const index = state.products.findIndex(p => p.id === action.payload.id);
-                if (index !== -1) {
-                    state.products[index] = action.payload;
-                } else {
-                    state.products.push(action.payload);
+                // Handle null case
+                if (action.payload) {
+                    // Update or add the product
+                    const index = state.products.findIndex(p => p.id === action.payload!.id);
+                    if (index !== -1) {
+                        state.products[index] = action.payload;
+                    } else {
+                        state.products.push(action.payload);
+                    }
                 }
                 state.error = null;
             })

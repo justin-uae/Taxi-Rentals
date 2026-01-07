@@ -8,12 +8,26 @@ export interface SearchDetails {
     duration?: string;
     date: string;
     time: string;
+    tripType?: 'one-way' | 'return';
+    returnDate?: string;
+    returnTime?: string;
+    passengers?: number;
+}
+
+// Taxi Variant - KM Range based pricing
+export interface TaxiVariant {
+    id: string; // Shopify variant ID (gid://shopify/ProductVariant/xxx)
+    title: string; // e.g., "0-50 km"
+    price: number; // Price for this range
+    kmRangeMin: number; // e.g., 0
+    kmRangeMax: number; // e.g., 50
 }
 
 // Taxi Option
 export interface TaxiOption {
     id: number;
-    shopifyId?: string; // Shopify product GID
+    shopifyId?: string; // Current selected variant ID (dynamic)
+    shopifyProductId?: string; // Base product ID
     name: string;
     type: string;
     image: string;
@@ -27,6 +41,18 @@ export interface TaxiOption {
     estimatedArrival: string;
     popular?: boolean;
     description?: string;
+    variants?: TaxiVariant[]; // All KM range variants
+}
+
+// Taxi Card Props
+export interface TaxiCardProps {
+    taxi: TaxiOption;
+    isSelected: boolean;
+    distance: number;
+    duration: string;
+    tripType?: 'one-way' | 'return';
+    onSelect: (id: number) => void;
+    onBookNow: (id: number) => void;
 }
 
 // Booking Details
@@ -46,17 +72,6 @@ export interface PaymentDetails extends BookingDetails {
     paymentMethod?: string;
 }
 
-export interface SearchDetails {
-    from: string;
-    to: string;
-    fromCoords?: { lat: number; lng: number };
-    toCoords?: { lat: number; lng: number };
-    distance?: number;
-    duration?: string;
-    date: string;
-    time: string;
-}
-
 export interface MapViewProps {
     from: string;
     to: string;
@@ -65,15 +80,6 @@ export interface MapViewProps {
     distance: number;
     duration: string;
     selectedTaxiId?: number | null;
-}
-
-export interface TaxiCardProps {
-    taxi: TaxiOption;
-    isSelected: boolean;
-    distance: number;
-    duration: string;
-    onSelect: (id: number) => void;
-    onBookNow: (id: number) => void;
 }
 
 export interface HeaderProps {

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navigation, Lock, RefreshCw, AlertCircle } from 'lucide-react';
-import type { SearchDetails } from '../types';
+import type { SearchDetails, TaxiOption } from '../types';
 import { useMobile } from '../hooks/useMobile';
 import TaxiHeader from '../Components/TaxiOptions/TaxiHeader';
 import MapView from '../Components/TaxiOptions/MapView';
@@ -11,6 +11,7 @@ import TaxiCard from '../Components/TaxiOptions/TaxiCard';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 import { createCheckout } from '../store/slices/cartSlice';
+import { selectVariantByDistance } from '../utils/variantSelector';
 
 const TaxiOptions: React.FC = () => {
     const location = useLocation();
@@ -65,13 +66,58 @@ const TaxiOptions: React.FC = () => {
         }
     }, [location]);
 
-    // Calculate price helper function
-    const calculatePrice = (baseFare: number, perKmRate: number, distance: number) => {
-        return Math.round(baseFare + (perKmRate * distance));
+    const distance = searchDetails.distance || 18.5;
+    const duration = searchDetails.duration || "25 mins";
+
+    const taxiOptionsWithVariants = useMemo(() => {
+        if (!distance || distance <= 0) {
+            console.warn('No valid distance available');
+            return taxiOptions;
+        }
+
+        return taxiOptions.map(taxi => {
+            // If no variants available, return taxi as-is
+            if (!taxi.variants || taxi.variants.length === 0) {
+                console.warn(`No variants found for ${taxi.name}`);
+                return taxi;
+            }
+
+            // Select the matching variant based on trip distance
+            const matchingVariant = selectVariantByDistance(taxi.variants, distance);
+
+            if (!matchingVariant) {
+                console.warn(`No matching variant for ${taxi.name} at ${distance} km`);
+                return taxi;
+            }
+            // Return taxi with the selected variant
+            return {
+                ...taxi,
+                shopifyId: matchingVariant.id,
+                selectedVariant: matchingVariant,
+                displayPrice: matchingVariant.price // Use variant price instead of calculated
+            } as TaxiOption & { selectedVariant?: any; displayPrice?: number };
+        });
+    }, [taxiOptions, distance]);
+
+    // Calculate price helper function (now uses variant price if available)
+    const calculatePrice = (taxi: TaxiOption & { displayPrice?: number }, distance: number, tripType?: 'one-way' | 'return') => {
+        let basePrice = 0;
+
+        // If we have a variant price (from KM ranges), use it
+        if ('displayPrice' in taxi && taxi.displayPrice) {
+            basePrice = taxi.displayPrice;
+        } else {
+            // Otherwise calculate from base + per km
+            basePrice = Math.round(taxi.baseFare + (taxi.perKmRate * distance));
+        }
+
+        // Double for return trips (quantity = 2)
+        const actualTripType = tripType || searchDetails.tripType || 'one-way';
+        return actualTripType === 'return' ? basePrice * 2 : basePrice;
     };
 
     // Filter and sort taxi options
-    const filteredAndSortedTaxiOptions = [...taxiOptions]
+    const filteredAndSortedTaxiOptions = [...taxiOptionsWithVariants]
         .filter(taxi => {
             if (activeFilter === 'all') return true;
             if (activeFilter === 'popular') return taxi.popular;
@@ -81,8 +127,8 @@ const TaxiOptions: React.FC = () => {
         })
         .sort((a, b) => {
             if (sortBy === 'price') {
-                const priceA = calculatePrice(a.baseFare, a.perKmRate, searchDetails.distance || 0);
-                const priceB = calculatePrice(b.baseFare, b.perKmRate, searchDetails.distance || 0);
+                const priceA = calculatePrice(a, distance);
+                const priceB = calculatePrice(b, distance);
                 return priceA - priceB;
             } else if (sortBy === 'rating') {
                 return b.rating - a.rating;
@@ -97,13 +143,10 @@ const TaxiOptions: React.FC = () => {
     };
 
     const handleProceedToPay = () => {
-        const selectedTaxiData = taxiOptions.find(taxi => taxi.id === selectedTaxi);
+        const selectedTaxiData = taxiOptionsWithVariants.find(taxi => taxi.id === selectedTaxi);
         if (selectedTaxiData) {
-            const totalPrice = calculatePrice(
-                selectedTaxiData.baseFare,
-                selectedTaxiData.perKmRate,
-                searchDetails.distance || 0
-            );
+            const tripType = searchDetails.tripType || 'one-way';
+            const totalPrice = calculatePrice(selectedTaxiData, distance, tripType);
 
             // Create cart item
             const cartItem = {
@@ -127,10 +170,7 @@ const TaxiOptions: React.FC = () => {
     };
 
     // Selected taxi data for booking bar
-    const selectedTaxiData = taxiOptions.find(t => t.id === selectedTaxi) || null;
-
-    const distance = searchDetails.distance || 18.5;
-    const duration = searchDetails.duration || "25 mins";
+    const selectedTaxiData = taxiOptionsWithVariants.find(t => t.id === selectedTaxi) || null;
 
     // Loading state
     if (loading && !initialized) {
@@ -246,7 +286,7 @@ const TaxiOptions: React.FC = () => {
                                 Available Rides ({filteredAndSortedTaxiOptions.length})
                             </h1>
                             <p className="text-gray-600 text-sm">
-                                Select your preferred vehicle
+                                Select your preferred vehicle • {distance.toFixed(1)} km range
                             </p>
                         </div>
 
@@ -267,6 +307,7 @@ const TaxiOptions: React.FC = () => {
                                     isSelected={selectedTaxi === taxi.id}
                                     distance={distance}
                                     duration={duration}
+                                    tripType={searchDetails.tripType}
                                     onSelect={setSelectedTaxi}
                                     onBookNow={handleBookNow}
                                 />
@@ -286,7 +327,7 @@ const TaxiOptions: React.FC = () => {
                                     Available Rides <span className="text-orange-600">({filteredAndSortedTaxiOptions.length})</span>
                                 </h1>
                                 <p className="text-gray-600 mb-4">
-                                    Select your preferred vehicle for the journey
+                                    Showing vehicles for {distance.toFixed(1)} km distance range
                                 </p>
 
                                 {/* Filters */}
@@ -307,6 +348,7 @@ const TaxiOptions: React.FC = () => {
                                         isSelected={selectedTaxi === taxi.id}
                                         distance={distance}
                                         duration={duration}
+                                        tripType={searchDetails.tripType}
                                         onSelect={setSelectedTaxi}
                                         onBookNow={handleBookNow}
                                     />
@@ -322,7 +364,9 @@ const TaxiOptions: React.FC = () => {
                                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-orange-500 animate-slideIn">
                                         <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
                                             <h3 className="text-lg font-bold mb-1">Booking Summary</h3>
-                                            <p className="text-sm text-orange-100">Review your selection</p>
+                                            <p className="text-sm text-orange-100">
+                                                {searchDetails.tripType === 'return' ? 'Round Trip' : 'One-Way Trip'}
+                                            </p>
                                         </div>
 
                                         <div className="p-4 space-y-3">
@@ -342,7 +386,7 @@ const TaxiOptions: React.FC = () => {
                                                         alt={selectedTaxiData.name}
                                                         className="w-16 h-10 object-cover rounded-lg"
                                                     />
-                                                    <div>
+                                                    <div className="flex-1">
                                                         <p className="font-bold text-gray-900">{selectedTaxiData.name}</p>
                                                         <p className="text-xs text-gray-500">{selectedTaxiData.type}</p>
                                                     </div>
@@ -353,14 +397,44 @@ const TaxiOptions: React.FC = () => {
                                             <div className="border-t border-gray-200 pt-3">
                                                 <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Journey Details</p>
                                                 <div className="space-y-1.5 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">Distance</span>
-                                                        <span className="font-semibold text-gray-900">{distance.toFixed(1)} km</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">Duration</span>
-                                                        <span className="font-semibold text-gray-900">{duration}</span>
-                                                    </div>
+                                                    {searchDetails.tripType === 'return' ? (
+                                                        <>
+                                                            {/* Outbound */}
+                                                            <div className="bg-blue-50 p-2 rounded-lg">
+                                                                <p className="text-xs font-semibold text-blue-700 mb-1">→ Outbound</p>
+                                                                <div className="text-xs text-gray-700">
+                                                                    <div>{searchDetails.date} at {searchDetails.time}</div>
+                                                                    <div className="text-gray-500">{distance.toFixed(1)} km</div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Return */}
+                                                            {searchDetails.returnDate && (
+                                                                <div className="bg-green-50 p-2 rounded-lg">
+                                                                    <p className="text-xs font-semibold text-green-700 mb-1">← Return</p>
+                                                                    <div className="text-xs text-gray-700">
+                                                                        <div>{searchDetails.returnDate} at {searchDetails.returnTime}</div>
+                                                                        <div className="text-gray-500">{distance.toFixed(1)} km</div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Date & Time</span>
+                                                                <span className="font-semibold text-gray-900">{searchDetails.date} at {searchDetails.time}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Distance</span>
+                                                                <span className="font-semibold text-gray-900">{distance.toFixed(1)} km</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Duration</span>
+                                                                <span className="font-semibold text-gray-900">{duration}</span>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -368,22 +442,35 @@ const TaxiOptions: React.FC = () => {
                                             <div className="border-t border-gray-200 pt-3">
                                                 <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Price Breakdown</p>
                                                 <div className="space-y-1.5 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">Base Fare</span>
-                                                        <span className="font-semibold text-gray-900">AED {selectedTaxiData.baseFare}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-gray-600">Distance ({distance.toFixed(1)} km)</span>
-                                                        <span className="font-semibold text-gray-900">
-                                                            AED {(selectedTaxiData.perKmRate * distance).toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between pt-2 border-t border-gray-200">
-                                                        <span className="font-bold text-gray-900">Total Amount</span>
-                                                        <span className="text-xl font-bold text-orange-600">
-                                                            AED {calculatePrice(selectedTaxiData.baseFare, selectedTaxiData.perKmRate, distance)}
-                                                        </span>
-                                                    </div>
+                                                    {searchDetails.tripType === 'return' ? (
+                                                        <>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Outbound Trip ({distance.toFixed(1)} km)</span>
+                                                                <span className="font-semibold text-gray-900">
+                                                                    AED {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Return Trip ({distance.toFixed(1)} km)</span>
+                                                                <span className="font-semibold text-gray-900">
+                                                                    AED {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between pt-2 border-t border-gray-200">
+                                                                <span className="font-bold text-gray-900">Total Amount</span>
+                                                                <span className="text-xl font-bold text-orange-600">
+                                                                    AED {calculatePrice(selectedTaxiData, distance, 'return')}
+                                                                </span>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex justify-between pt-2">
+                                                            <span className="font-bold text-gray-900">Total Amount</span>
+                                                            <span className="text-xl font-bold text-orange-600">
+                                                                AED {calculatePrice(selectedTaxiData, distance, 'one-way')}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -406,9 +493,6 @@ const TaxiOptions: React.FC = () => {
                                                 )}
                                             </button>
 
-                                            <p className="text-xs text-center text-gray-500">
-                                                Secure payment
-                                            </p>
                                         </div>
                                     </div>
                                 )}
@@ -461,7 +545,7 @@ const TaxiOptions: React.FC = () => {
                                 <p className="font-bold text-gray-900 truncate">{selectedTaxiData.name}</p>
                                 <p className="text-sm text-gray-600">
                                     <span className="font-bold text-orange-600">
-                                        AED {calculatePrice(selectedTaxiData.baseFare, selectedTaxiData.perKmRate, distance)}
+                                        AED {calculatePrice(selectedTaxiData, distance)}
                                     </span>
                                 </p>
                             </div>

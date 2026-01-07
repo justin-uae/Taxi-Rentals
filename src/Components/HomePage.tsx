@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft } from 'lucide-react';
+import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate } from 'lucide-react';
 import Banner3 from '../assets/Banner3.png';
 
 declare global {
@@ -46,6 +46,10 @@ const Homepage: React.FC = () => {
     const [selectedTime, setSelectedTime] = useState('10:00');
     const [returnTime, setReturnTime] = useState('18:00');
     const [numberOfPersons, setNumberOfPersons] = useState(1);
+    const [isGettingCurrentLocation, setIsGettingCurrentLocation] = useState<{
+        pickup: boolean;
+        dropoff: boolean;
+    }>({ pickup: false, dropoff: false });
 
     // Refs for Google Places Autocomplete
     const pickupInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +80,103 @@ const Homepage: React.FC = () => {
 
     const timeSlots = generateTimeSlots();
 
+    // Get current location using Geolocation API
+    const getCurrentLocation = (type: 'pickup' | 'dropoff') => {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        setIsGettingCurrentLocation(prev => ({ ...prev, [type]: true }));
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+
+                try {
+                    // Use Google Geocoding API to get address from coordinates
+                    const response = await fetch(
+                        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAP_API_KEY}`
+                    );
+
+                    const data = await response.json();
+
+                    if (data.results && data.results[0]) {
+                        const address = data.results[0].formatted_address;
+
+                        if (type === 'pickup') {
+                            setPickupLocation(address);
+                            setPickupDetails({
+                                address,
+                                lat: latitude,
+                                lng: longitude
+                            });
+                            // Update autocomplete input
+                            if (pickupInputRef.current) {
+                                pickupInputRef.current.value = address;
+                            }
+                        } else {
+                            setDropoffLocation(address);
+                            setDropoffDetails({
+                                address,
+                                lat: latitude,
+                                lng: longitude
+                            });
+                            // Update autocomplete input
+                            if (dropoffInputRef.current) {
+                                dropoffInputRef.current.value = address;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error getting address from coordinates:', error);
+                    const fallbackAddress = `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`;
+
+                    if (type === 'pickup') {
+                        setPickupLocation(fallbackAddress);
+                        setPickupDetails({
+                            address: fallbackAddress,
+                            lat: latitude,
+                            lng: longitude
+                        });
+                    } else {
+                        setDropoffLocation(fallbackAddress);
+                        setDropoffDetails({
+                            address: fallbackAddress,
+                            lat: latitude,
+                            lng: longitude
+                        });
+                    }
+                } finally {
+                    setIsGettingCurrentLocation(prev => ({ ...prev, [type]: false }));
+                }
+            },
+            (error) => {
+                console.error('Error getting current location:', error);
+                setIsGettingCurrentLocation(prev => ({ ...prev, [type]: false }));
+
+                let errorMessage = 'Unable to get your current location.';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Location access was denied. Please enable location services.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Location information is unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Location request timed out. Please try again.';
+                        break;
+                }
+                alert(errorMessage);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    };
+
     // Initialize Google Maps Places Autocomplete
     useEffect(() => {
         const loadGoogleMapsScript = () => {
@@ -86,7 +187,7 @@ const Homepage: React.FC = () => {
                 script.id = 'google-maps-script';
                 const googleMapAPIKey = import.meta.env.VITE_GOOGLE_MAP_API_KEY;
 
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapAPIKey}&libraries=places`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapAPIKey}&libraries=places,geocoding`;
                 script.async = true;
                 script.defer = true;
                 script.onload = initAutocomplete;
@@ -297,7 +398,7 @@ const Homepage: React.FC = () => {
             <div className="container mx-auto px-4 lg:px-8">
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-screen py-8 lg:py-12 mt-10">
                     {/* Left Column - Booking Form */}
-                    <div className="max-w-md w-full mx-auto lg:mx-0 order-2 lg:order-1">
+                    <div className="max-w-lg w-full mx-auto lg:mx-0 order-2 lg:order-1">
                         <div className="mb-6 lg:mb-8">
                             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 mb-4 leading-tight">
                                 Make Your
@@ -352,18 +453,35 @@ const Homepage: React.FC = () => {
                                         Pickup Location
                                     </label>
                                 </div>
-                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <input
-                                        ref={pickupInputRef}
-                                        type="text"
-                                        placeholder="Enter pickup location"
-                                        value={pickupLocation}
-                                        onChange={(e) => setPickupLocation(e.target.value)}
-                                        required
-                                        className="relative w-full py-4 pl-12 pr-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 text-gray-700 placeholder-gray-400 transition-all duration-200"
-                                    />
-                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
+                                <div className="relative">
+                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <input
+                                            ref={pickupInputRef}
+                                            type="text"
+                                            placeholder="Enter pickup location"
+                                            value={pickupLocation}
+                                            onChange={(e) => setPickupLocation(e.target.value)}
+                                            required
+                                            className="relative w-full py-4 pl-12 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                        />
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
+
+                                        {/* Current Location Button for Pickup */}
+                                        <button
+                                            type="button"
+                                            onClick={() => getCurrentLocation('pickup')}
+                                            disabled={isGettingCurrentLocation.pickup}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Use current location"
+                                        >
+                                            {isGettingCurrentLocation.pickup ? (
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                                            ) : (
+                                                <Locate className="h-4 w-4 text-gray-500 hover:text-orange-500" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -377,18 +495,35 @@ const Homepage: React.FC = () => {
                                         Destination
                                     </label>
                                 </div>
-                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                    <input
-                                        ref={dropoffInputRef}
-                                        type="text"
-                                        placeholder="Enter destination"
-                                        value={dropoffLocation}
-                                        onChange={(e) => setDropoffLocation(e.target.value)}
-                                        required
-                                        className="relative w-full py-4 pl-12 pr-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 placeholder-gray-400 transition-all duration-200"
-                                    />
-                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
+                                <div className="relative">
+                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <input
+                                            ref={dropoffInputRef}
+                                            type="text"
+                                            placeholder="Enter destination"
+                                            value={dropoffLocation}
+                                            onChange={(e) => setDropoffLocation(e.target.value)}
+                                            required
+                                            className="relative w-full py-4 pl-12 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                        />
+                                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
+
+                                        {/* Current Location Button for Dropoff */}
+                                        <button
+                                            type="button"
+                                            onClick={() => getCurrentLocation('dropoff')}
+                                            disabled={isGettingCurrentLocation.dropoff}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title="Use current location"
+                                        >
+                                            {isGettingCurrentLocation.dropoff ? (
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                            ) : (
+                                                <Locate className="h-4 w-4 text-gray-500 hover:text-blue-500" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -815,8 +950,9 @@ const Homepage: React.FC = () => {
                     </div>
 
                     {/* Right Column - Hero Image */}
-                    <div className="relative w-full order-1 lg:order-2">
+                    <div className="hidden md:table-cell relative w-full order-1 lg:order-2">
                         <div className="relative">
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-400/20 rounded-[40px] lg:rounded-[60px] blur-3xl"></div>
                             <img
                                 src={Banner3}
                                 alt="Orange Jeep Wrangler"

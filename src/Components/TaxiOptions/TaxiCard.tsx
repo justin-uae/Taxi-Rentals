@@ -2,18 +2,30 @@ import React from 'react';
 import { Users, Briefcase, Star, Check } from 'lucide-react';
 import type { TaxiCardProps } from '../../types';
 
-const calculatePrice = (baseFare: number, perKmRate: number, distance: number) => {
-    return Math.round(baseFare + (perKmRate * distance));
+const calculatePrice = (taxi: any, distance: number, tripType?: 'one-way' | 'return') => {
+    let basePrice = 0;
+
+    // If we have a variant price (from KM ranges), use it
+    if ('displayPrice' in taxi && taxi.displayPrice) {
+        basePrice = taxi.displayPrice;
+    } else {
+        // Otherwise calculate from base + per km
+        basePrice = Math.round(taxi.baseFare + (taxi.perKmRate * distance));
+    }
+
+    // Double for return trips
+    return tripType === 'return' ? basePrice * 2 : basePrice;
 };
 
 const TaxiCard: React.FC<TaxiCardProps> = ({
     taxi,
     isSelected,
     distance,
+    tripType = 'one-way',
     onSelect,
     onBookNow
 }) => {
-    const totalPrice = calculatePrice(taxi.baseFare, taxi.perKmRate, distance);
+    const totalPrice = calculatePrice(taxi, distance, tripType);
     const isMobile = window.innerWidth < 1024;
 
     const handleCardClick = () => {
@@ -41,6 +53,11 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                     alt={taxi.name}
                                     className="w-full h-full object-cover"
                                 />
+                                {tripType === 'return' && (
+                                    <div className="absolute top-1 left-1 right-1 bg-green-600/90 backdrop-blur-sm text-white px-1.5 py-0.5 rounded text-[10px] font-bold text-center">
+                                        Round Trip
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -67,7 +84,9 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                             {/* Price */}
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <div className="text-xs text-gray-500">Total Fare</div>
+                                    <div className="text-xs text-gray-500">
+                                        {tripType === 'return' ? 'Round Trip' : 'Total Fare'}
+                                    </div>
                                     <div className="font-bold text-gray-900">AED {totalPrice}</div>
                                 </div>
                                 <button
@@ -111,6 +130,11 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                    Popular
                                 </div>
                             )}
+                            {tripType === 'return' && (
+                                <div className="absolute bottom-3 left-3 right-3 bg-green-600/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold text-center">
+                                    Round Trip
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -147,7 +171,7 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                 {/* Features */}
                                 <div className="mb-4">
                                     <div className="flex flex-wrap gap-2">
-                                        {taxi.features.slice(0, 3).map((feature, index) => (
+                                        {taxi.features.slice(0, 3).map((feature: string, index: number) => (
                                             <span
                                                 key={index}
                                                 className="px-3 py-1.5 bg-gray-50 text-gray-700 text-xs rounded-lg font-medium border border-gray-200"
@@ -162,15 +186,16 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                             {/* Price & CTA */}
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <div className="text-sm text-gray-500 mb-1">Total Fare</div>
+                                    <div className="text-sm text-gray-500 mb-1">
+                                        {tripType === 'return' ? 'Round Trip Fare' : 'One-Way Fare'}
+                                    </div>
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-2xl font-bold text-gray-900">
                                             AED {totalPrice}
                                         </span>
-                                        <span className="text-gray-500 text-sm line-through">AED {totalPrice + 10}</span>
                                     </div>
                                     <p className="text-xs text-gray-600 mt-1">
-                                        All fees included
+                                        All fees included • Fixed rate
                                     </p>
                                 </div>
                                 <button

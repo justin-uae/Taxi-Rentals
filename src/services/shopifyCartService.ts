@@ -12,19 +12,39 @@ interface ShopifyCartLineInput {
 
 /**
  * Convert cart item to Shopify line input
+ * 
+ * PRICING STRATEGY:
+ * - One-way trip: quantity = 1
+ * - Return trip: quantity = 2 (represents 2 trips with same variant)
+ * 
+ * This allows dynamic pricing while using Shopify's native system
  */
 export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput => {
+    const isReturn = cartItem.search.tripType === 'return';
+
     return {
-        merchandiseId: cartItem.taxi.shopifyId || '', // This should be the variant ID
-        quantity: cartItem.quantity || 1,
+        merchandiseId: cartItem.taxi.shopifyId || '', // Variant ID
+        quantity: isReturn ? 2 : 1, // 2 for return trips!
         attributes: [
+            { key: 'booking_type', value: 'Taxi Booking' },
+            { key: 'trip_type', value: isReturn ? 'Round Trip' : 'One-Way' },
+            { key: 'vehicle', value: cartItem.taxi.name },
             { key: 'from_location', value: cartItem.search.from },
             { key: 'to_location', value: cartItem.search.to },
-            { key: 'distance', value: `${cartItem.search.distance || 0} km` },
+            { key: 'distance', value: `${cartItem.search.distance || 0} km${isReturn ? ' (each way)' : ''}` },
             { key: 'duration', value: cartItem.search.duration || '' },
-            { key: 'pickup_date', value: cartItem.search.date },
-            { key: 'pickup_time', value: cartItem.search.time },
-            { key: 'total_price', value: `AED ${cartItem.totalPrice}` },
+
+            // Outbound details
+            { key: 'outbound_date', value: cartItem.search.date },
+            { key: 'outbound_time', value: cartItem.search.time },
+
+            // Return details (if applicable)
+            ...(isReturn && cartItem.search.returnDate ? [
+                { key: 'return_date', value: cartItem.search.returnDate },
+                { key: 'return_time', value: cartItem.search.returnTime || '' },
+            ] : []),
+
+            { key: 'total_fare', value: `AED ${cartItem.totalPrice}` },
         ],
     };
 };
@@ -62,11 +82,47 @@ export const createCart = async (cartItem: CartItem, email?: string): Promise<st
         lines: [lineItem],
         attributes: [
             { key: 'booking_type', value: 'taxi_booking' },
+            { key: 'trip_type', value: cartItem.search.tripType || 'one-way' },
+            { key: 'vehicle_name', value: cartItem.taxi.name },
             { key: 'from_location', value: cartItem.search.from },
             { key: 'to_location', value: cartItem.search.to },
-            { key: 'pickup_date', value: cartItem.search.date },
-            { key: 'pickup_time', value: cartItem.search.time },
+            { key: 'outbound_date', value: cartItem.search.date },
+            { key: 'outbound_time', value: cartItem.search.time },
+            ...(cartItem.search.tripType === 'return' && cartItem.search.returnDate ? [
+                { key: 'return_date', value: cartItem.search.returnDate },
+                { key: 'return_time', value: cartItem.search.returnTime || '' },
+            ] : []),
+            { key: 'distance_km', value: `${cartItem.search.distance || 0}` },
+            { key: 'calculated_total', value: `${cartItem.totalPrice}` },
         ],
+        note: cartItem.search.tripType === 'return'
+            ? `Round Trip Taxi Booking: ${cartItem.taxi.name}
+From: ${cartItem.search.from}
+To: ${cartItem.search.to}
+Distance: ${cartItem.search.distance || 0} km (each way)
+
+OUTBOUND TRIP:
+Date: ${cartItem.search.date}
+Time: ${cartItem.search.time}
+
+RETURN TRIP:
+Date: ${cartItem.search.returnDate || 'N/A'}
+Time: ${cartItem.search.returnTime || 'N/A'}
+
+Fare Calculation:
+Trip Fare (${cartItem.search.distance || 0} km): AED ${cartItem.totalPrice / 2}
+Quantity: 2 trips (Round Trip)
+Total Fare: AED ${cartItem.totalPrice}`
+            : `Taxi Booking: ${cartItem.taxi.name}
+From: ${cartItem.search.from}
+To: ${cartItem.search.to}
+Distance: ${cartItem.search.distance || 0} km
+Pickup: ${cartItem.search.date} at ${cartItem.search.time}
+
+Fare Calculation:
+Base Fare: AED ${cartItem.taxi.baseFare}
+Distance Charge: ${cartItem.search.distance || 0} km × AED ${cartItem.taxi.perKmRate}/km = AED ${((cartItem.search.distance || 0) * cartItem.taxi.perKmRate).toFixed(2)}
+Total Fare: AED ${cartItem.totalPrice}`,
     };
 
     // Add buyer identity with email if provided

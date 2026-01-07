@@ -1,105 +1,62 @@
-import React from 'react';
-import { Users, Briefcase, Fuel, Settings, Star, ArrowRight } from 'lucide-react';
-
-interface Car {
-    id: number;
-    name: string;
-    category: string;
-    image: string;
-    rating: number;
-    reviews: number;
-    passengers: number;
-    luggage: number;
-    transmission: string;
-    fuel: string;
-    pricePerDay: number;
-    popular?: boolean;
-}
+import React, { useEffect } from 'react';
+import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw } from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 
 const PopularCars: React.FC = () => {
-    const cars: Car[] = [
-        {
-            id: 1,
-            name: "Toyota Camry",
-            category: "Sedan",
-            image: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=500&h=300&fit=crop",
-            rating: 4.8,
-            reviews: 256,
-            passengers: 5,
-            luggage: 3,
-            transmission: "Automatic",
-            fuel: "Hybrid",
-            pricePerDay: 45,
-            popular: true
-        },
-        {
-            id: 2,
-            name: "Jeep Wrangler",
-            category: "SUV",
-            image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500&h=300&fit=crop",
-            rating: 4.9,
-            reviews: 189,
-            passengers: 5,
-            luggage: 4,
-            transmission: "Automatic",
-            fuel: "Petrol",
-            pricePerDay: 75,
-            popular: true
-        },
-        {
-            id: 3,
-            name: "BMW 3 Series",
-            category: "Luxury",
-            image: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=500&h=300&fit=crop",
-            rating: 4.7,
-            reviews: 145,
-            passengers: 5,
-            luggage: 2,
-            transmission: "Automatic",
-            fuel: "Petrol",
-            pricePerDay: 95
-        },
-        {
-            id: 4,
-            name: "Tesla Model 3",
-            category: "Electric",
-            image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=500&h=300&fit=crop",
-            rating: 5.0,
-            reviews: 312,
-            passengers: 5,
-            luggage: 3,
-            transmission: "Automatic",
-            fuel: "Electric",
-            pricePerDay: 85,
-            popular: true
-        },
-        {
-            id: 5,
-            name: "Honda CR-V",
-            category: "SUV",
-            image: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=500&h=300&fit=crop",
-            rating: 4.6,
-            reviews: 198,
-            passengers: 7,
-            luggage: 4,
-            transmission: "Automatic",
-            fuel: "Hybrid",
-            pricePerDay: 65
-        },
-        {
-            id: 6,
-            name: "Mercedes-Benz E-Class",
-            category: "Luxury",
-            image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=500&h=300&fit=crop",
-            rating: 4.9,
-            reviews: 267,
-            passengers: 5,
-            luggage: 3,
-            transmission: "Automatic",
-            fuel: "Diesel",
-            pricePerDay: 120
+    const dispatch = useAppDispatch();
+    const { products, loading, error, initialized } = useAppSelector((state) => state.shopify);
+
+    // Fetch products on mount
+    useEffect(() => {
+        if (!initialized) {
+            dispatch(fetchTaxiProducts());
         }
-    ];
+    }, [dispatch, initialized]);
+
+    // Loading state
+    if (loading && !initialized) {
+        return (
+            <section className="py-16 lg:py-24 bg-white">
+                <div className="container mx-auto px-4 lg:px-8">
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <Loader className="h-12 w-12 text-orange-600 animate-spin mb-4" />
+                        <p className="text-gray-600 font-medium">Loading our fleet...</p>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    // Error state
+    if (error && !loading) {
+        return (
+            <section className="py-16 lg:py-24 bg-white">
+                <div className="container mx-auto px-4 lg:px-8">
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+                        <p className="text-gray-900 font-semibold mb-2">Failed to load vehicles</p>
+                        <p className="text-gray-600 text-sm mb-4">{error}</p>
+                        <button
+                            onClick={() => dispatch(fetchTaxiProducts())}
+                            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    // Get only popular products or first 6 products
+    const displayedProducts = products
+        .filter(product => product.popular)
+        .slice(0, 6);
+
+    // If no popular products, show first 6
+    const carsToShow = displayedProducts.length > 0 ? displayedProducts : products.slice(0, 6);
 
     return (
         <section className="py-16 lg:py-24 bg-white">
@@ -118,95 +75,108 @@ const PopularCars: React.FC = () => {
                 </div>
 
                 {/* Cars Grid */}
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                    {cars.map((car) => (
-                        <div
-                            key={car.id}
-                            className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 border border-gray-100"
-                        >
-                            {/* Car Image */}
-                            <div className="relative overflow-hidden bg-gray-100 h-48">
-                                <img
-                                    src={car.image}
-                                    alt={car.name}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                {car.popular && (
-                                    <div className="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                        Popular
-                                    </div>
-                                )}
-                                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-700">
-                                    {car.category}
-                                </div>
-                            </div>
+                {carsToShow.length > 0 ? (
+                    <>
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                            {carsToShow?.map((car) => (
+                                <div
+                                    key={car?.id}
+                                    className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-orange-200"
+                                >
+                                    {/* Car Image */}
+                                    <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 h-56">
+                                        <img
+                                            src={car?.image}
+                                            alt={car?.name}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                        />
 
-                            {/* Car Details */}
-                            <div className="p-6">
-                                {/* Name & Rating */}
-                                <div className="mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                        {car.name}
-                                    </h3>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1">
-                                            <Star className="h-4 w-4 fill-orange-400 text-orange-400" />
-                                            <span className="text-sm font-semibold text-gray-900">
-                                                {car.rating}
-                                            </span>
+                                        {/* Gradient Overlay */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                                        {/* Badges */}
+                                        {car?.popular && (
+                                            <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg">
+                                                Popular
+                                            </div>
+                                        )}
+                                        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold text-gray-800 shadow-lg">
+                                            {car?.type}
                                         </div>
-                                        <span className="text-sm text-gray-500">
-                                            ({car.reviews} reviews)
-                                        </span>
                                     </div>
-                                </div>
 
-                                {/* Specifications */}
-                                <div className="grid grid-cols-2 gap-3 mb-5 pb-5 border-b border-gray-100">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Users className="h-4 w-4" />
-                                        <span className="text-sm">{car.passengers} Seats</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Briefcase className="h-4 w-4" />
-                                        <span className="text-sm">{car.luggage} Bags</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Settings className="h-4 w-4" />
-                                        <span className="text-sm">{car.transmission}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <Fuel className="h-4 w-4" />
-                                        <span className="text-sm">{car.fuel}</span>
-                                    </div>
-                                </div>
+                                    {/* Car Details */}
+                                    <div className="p-6">
+                                        {/* Name & Rating */}
+                                        <div className="mb-5">
+                                            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors">
+                                                {car?.name}
+                                            </h3>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-full">
+                                                    <Star className="h-4 w-4 fill-orange-500 text-orange-500" />
+                                                    <span className="text-sm font-bold text-orange-600">
+                                                        {car?.rating}
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm text-gray-500 font-medium">
+                                                    {car?.reviews} reviews
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                {/* Price & CTA */}
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Starting from</p>
-                                        <p className="text-2xl font-bold text-gray-900">
-                                            ${car.pricePerDay}
-                                            <span className="text-sm font-normal text-gray-500">/day</span>
-                                        </p>
+                                        {/* Specifications */}
+                                        <div className="space-y-3 mb-5 pb-5 border-b-2 border-gray-100">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5 text-gray-700">
+                                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                                        <Users className="h-4 w-4 text-blue-600" />
+                                                    </div>
+                                                    <span className="text-sm font-semibold">{car?.passengers} Passengers</span>
+                                                </div>
+                                                <div className="flex items-center gap-2.5 text-gray-700">
+                                                    <div className="p-2 bg-purple-50 rounded-lg">
+                                                        <Briefcase className="h-4 w-4 text-purple-600" />
+                                                    </div>
+                                                    <span className="text-sm font-semibold">{car?.luggage} Bags</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Features */}
+                                        {car?.features && car.features.length > 0 && (
+                                            <div className="space-y-2">
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
+                                                    Features
+                                                </p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {car.features.slice(0, 3)?.map((feature, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 border border-gray-200"
+                                                        >
+                                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                                            {feature}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <button className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg font-semibold transition-colors duration-200 flex items-center gap-2 group">
-                                        <span className="text-sm">Rent Now</span>
-                                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                                    </button>
+
+                                    {/* Hover Glow Effect */}
+                                    <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                                        <div className="absolute inset-0 rounded-3xl shadow-2xl shadow-orange-500/20"></div>
+                                    </div>
                                 </div>
-                            </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-
-                {/* View All Button */}
-                <div className="text-center mt-12">
-                    <button className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200">
-                        <span>View All Vehicles</span>
-                        <ArrowRight className="h-5 w-5" />
-                    </button>
-                </div>
+                    </>
+                ) : (
+                    <div className="text-center py-12">
+                        <p className="text-gray-600">No vehicles available at the moment.</p>
+                    </div>
+                )}
             </div>
         </section>
     );
