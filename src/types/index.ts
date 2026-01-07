@@ -1,5 +1,19 @@
+// Search Details
+export interface SearchDetails {
+    from: string;
+    to: string;
+    fromCoords?: { lat: number; lng: number };
+    toCoords?: { lat: number; lng: number };
+    distance?: number;
+    duration?: string;
+    date: string;
+    time: string;
+}
+
+// Taxi Option
 export interface TaxiOption {
     id: number;
+    shopifyId?: string; // Shopify product GID
     name: string;
     type: string;
     image: string;
@@ -8,10 +22,28 @@ export interface TaxiOption {
     passengers: number;
     luggage: number;
     features: string[];
-    perKmRate: number;
     baseFare: number;
+    perKmRate: number;
+    estimatedArrival: string;
     popular?: boolean;
-    estimatedArrival?: string;
+    description?: string;
+}
+
+// Booking Details
+export interface BookingDetails {
+    taxi: TaxiOption;
+    search: SearchDetails;
+    totalPrice: number;
+}
+
+// Payment Details
+export interface PaymentDetails extends BookingDetails {
+    customerInfo?: {
+        name: string;
+        email: string;
+        phone: string;
+    };
+    paymentMethod?: string;
 }
 
 export interface SearchDetails {

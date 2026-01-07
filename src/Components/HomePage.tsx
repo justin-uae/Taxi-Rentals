@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Navigation, Clock, Users } from 'lucide-react';
+import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft } from 'lucide-react';
 import Banner3 from '../assets/Banner3.png';
 
 declare global {
@@ -16,6 +16,8 @@ interface PlaceDetails {
     lng: number;
 }
 
+type TripType = 'one-way' | 'return';
+
 const Homepage: React.FC = () => {
     const navigate = useNavigate();
 
@@ -23,13 +25,26 @@ const Homepage: React.FC = () => {
     const [dropoffLocation, setDropoffLocation] = useState('');
     const [pickupDetails, setPickupDetails] = useState<PlaceDetails | null>(null);
     const [dropoffDetails, setDropoffDetails] = useState<PlaceDetails | null>(null);
+    const [tripType, setTripType] = useState<TripType>('one-way');
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [returnDate, setReturnDate] = useState<Date>(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+    });
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentReturnMonth, setCurrentReturnMonth] = useState(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+    });
     const [distance, setDistance] = useState<number | null>(null);
     const [duration, setDuration] = useState<string | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [selectedTime, setSelectedTime] = useState('10:00');
+    const [returnTime, setReturnTime] = useState('18:00');
     const [numberOfPersons, setNumberOfPersons] = useState(1);
 
     // Refs for Google Places Autocomplete
@@ -191,12 +206,15 @@ const Homepage: React.FC = () => {
             state: {
                 from: pickupLocation,
                 to: dropoffLocation,
+                tripType: tripType,
                 fromCoords: pickupDetails ? { lat: pickupDetails.lat, lng: pickupDetails.lng } : null,
                 toCoords: dropoffDetails ? { lat: dropoffDetails.lat, lng: dropoffDetails.lng } : null,
                 distance: distance,
                 duration: duration,
                 date: formatDate(selectedDate),
                 time: formatTime12Hour(selectedTime),
+                returnDate: tripType === 'return' ? formatDate(returnDate) : null,
+                returnTime: tripType === 'return' ? formatTime12Hour(returnTime) : null,
                 passengers: numberOfPersons
             }
         });
@@ -214,9 +232,14 @@ const Homepage: React.FC = () => {
         setShowDatePicker(false);
     };
 
-    const generateCalendar = () => {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth();
+    const handleReturnDateClick = (date: Date) => {
+        setReturnDate(date);
+        setShowReturnDatePicker(false);
+    };
+
+    const generateCalendar = (currentMonthDate: Date) => {
+        const year = currentMonthDate.getFullYear();
+        const month = currentMonthDate.getMonth();
 
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
@@ -235,17 +258,13 @@ const Homepage: React.FC = () => {
         return days;
     };
 
-    const previousMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-    };
-
-    const nextMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-    };
-
-    const isDateSelected = (date: Date) => {
+    const isDateSelected = (date: Date, type: 'departure' | 'return') => {
         if (!date) return false;
-        return date.toDateString() === selectedDate.toDateString();
+        if (type === 'departure') {
+            return date.toDateString() === selectedDate.toDateString();
+        } else {
+            return date.toDateString() === returnDate.toDateString();
+        }
     };
 
     const isPastDate = (date: Date) => {
@@ -254,7 +273,22 @@ const Homepage: React.FC = () => {
         return date < today;
     };
 
-    const calendarDays = generateCalendar();
+    const isBeforeDeparture = (date: Date) => {
+        return date < selectedDate;
+    };
+
+    const handleTripTypeChange = (type: TripType) => {
+        setTripType(type);
+        // If switching to one-way and return date is before selected date, reset return date
+        if (type === 'one-way' && returnDate < selectedDate) {
+            const tomorrow = new Date(selectedDate);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            setReturnDate(tomorrow);
+        }
+    };
+
+    const departureCalendarDays = generateCalendar(currentMonth);
+    const returnCalendarDays = generateCalendar(currentReturnMonth);
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"];
 
@@ -274,6 +308,40 @@ const Homepage: React.FC = () => {
                         </div>
 
                         <form onSubmit={handleSearch} className="space-y-4">
+                            {/* Trip Type Selection */}
+                            <div className="group">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                        <div className="p-1.5 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-lg border border-indigo-200">
+                                            <ArrowRightLeft className="h-4 w-4 text-indigo-600" />
+                                        </div>
+                                        Trip Type
+                                    </label>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTripTypeChange('one-way')}
+                                        className={`py-3 px-4 rounded-xl border-2 font-medium transition-all duration-200 ${tripType === 'one-way'
+                                            ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        One Way
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTripTypeChange('return')}
+                                        className={`py-3 px-4 rounded-xl border-2 font-medium transition-all duration-200 ${tripType === 'return'
+                                            ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                            }`}
+                                    >
+                                        Return
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Pickup Location */}
                             <div className="group">
                                 <div className="flex items-center justify-between mb-2">
@@ -359,14 +427,14 @@ const Homepage: React.FC = () => {
 
                             {/* Date and Time Row */}
                             <div className="grid grid-cols-2 gap-4">
-                                {/* Date Selection */}
+                                {/* Departure Date Selection */}
                                 <div className="group relative">
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                                             <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
                                                 <Calendar className="h-4 w-4 text-purple-600" />
                                             </div>
-                                            Travel Date
+                                            Departure Date
                                         </label>
                                     </div>
                                     <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
@@ -388,7 +456,7 @@ const Homepage: React.FC = () => {
                                             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                                                 <button
                                                     type="button"
-                                                    onClick={previousMonth}
+                                                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
                                                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                                                 >
                                                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,7 +472,7 @@ const Homepage: React.FC = () => {
 
                                                 <button
                                                     type="button"
-                                                    onClick={nextMonth}
+                                                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
                                                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                                                 >
                                                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -424,14 +492,14 @@ const Homepage: React.FC = () => {
 
                                             {/* Calendar grid */}
                                             <div className="grid grid-cols-7 gap-2">
-                                                {calendarDays.map((date, index) => {
+                                                {departureCalendarDays.map((date, index) => {
                                                     if (!date) {
                                                         return <div key={`empty-${index}`} className="aspect-square" />;
                                                     }
 
                                                     const isToday = date.toDateString() === new Date().toDateString();
                                                     const isPast = isPastDate(date);
-                                                    const isSelected = isDateSelected(date);
+                                                    const isSelected = isDateSelected(date, 'departure');
 
                                                     return (
                                                         <button
@@ -482,14 +550,14 @@ const Homepage: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Time Selection */}
+                                {/* Departure Time Selection */}
                                 <div className="group">
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                                             <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
                                                 <Clock className="h-4 w-4 text-blue-600" />
                                             </div>
-                                            Time
+                                            Departure Time
                                         </label>
                                     </div>
                                     <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
@@ -512,6 +580,167 @@ const Homepage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Return Date and Time (Only for Return trips) */}
+                            {tripType === 'return' && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Return Date Selection */}
+                                    <div className="group relative">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                                <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
+                                                    <Calendar className="h-4 w-4 text-purple-600" />
+                                                </div>
+                                                Return Date
+                                            </label>
+                                        </div>
+                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowReturnDatePicker(!showReturnDatePicker)}
+                                                className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
+                                            >
+                                                <div className="text-gray-700 font-medium text-sm">
+                                                    {returnDate.getDate()}/{returnDate.getMonth() + 1}/{returnDate.getFullYear().toString().slice(-2)}
+                                                </div>
+                                            </button>
+                                        </div>
+
+                                        {/* Return Date Picker Dropdown */}
+                                        {showReturnDatePicker && (
+                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown min-w-[300px]">
+                                                {/* Header */}
+                                                <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() - 1, 1))}
+                                                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    >
+                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                        </svg>
+                                                    </button>
+
+                                                    <div className="text-center">
+                                                        <h3 className="text-lg font-bold text-gray-900">
+                                                            {monthNames[currentReturnMonth.getMonth()]} {currentReturnMonth.getFullYear()}
+                                                        </h3>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() + 1, 1))}
+                                                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    >
+                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+
+                                                {/* Day headers */}
+                                                <div className="grid grid-cols-7 gap-2 mb-2">
+                                                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                        <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
+                                                            {day}
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Calendar grid */}
+                                                <div className="grid grid-cols-7 gap-2">
+                                                    {returnCalendarDays.map((date, index) => {
+                                                        if (!date) {
+                                                            return <div key={`empty-${index}`} className="aspect-square" />;
+                                                        }
+
+                                                        const isToday = date.toDateString() === new Date().toDateString();
+                                                        const isPast = isPastDate(date);
+                                                        const isBefore = isBeforeDeparture(date);
+                                                        const isSelected = isDateSelected(date, 'return');
+
+                                                        return (
+                                                            <button
+                                                                key={index}
+                                                                type="button"
+                                                                onClick={() => !isPast && !isBefore && handleReturnDateClick(date)}
+                                                                disabled={isPast || isBefore}
+                                                                className={`
+                                                                aspect-square rounded-lg text-sm font-medium transition-all duration-200
+                                                                ${isPast || isBefore
+                                                                        ? 'text-gray-300 cursor-not-allowed'
+                                                                        : 'hover:bg-purple-50 cursor-pointer'
+                                                                    }
+                                                                ${isSelected
+                                                                        ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
+                                                                        : 'text-gray-700'
+                                                                    }
+                                                                ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
+                                                            `}
+                                                            >
+                                                                {date.getDate()}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Footer */}
+                                                <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const tomorrow = new Date(selectedDate);
+                                                            tomorrow.setDate(tomorrow.getDate() + 1);
+                                                            setReturnDate(tomorrow);
+                                                            setCurrentReturnMonth(tomorrow);
+                                                        }}
+                                                        className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                                                    >
+                                                        Next Day
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowReturnDatePicker(false)}
+                                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
+                                                    >
+                                                        Done
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Return Time Selection */}
+                                    <div className="group">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                                <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                    <Clock className="h-4 w-4 text-blue-600" />
+                                                </div>
+                                                Return Time
+                                            </label>
+                                        </div>
+                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                            <select
+                                                value={returnTime}
+                                                onChange={(e) => setReturnTime(e.target.value)}
+                                                className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 transition-all duration-200 appearance-none cursor-pointer font-medium text-sm"
+                                            >
+                                                {timeSlots.map((time) => (
+                                                    <option key={time} value={time}>
+                                                        {formatTime12Hour(time)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Number of Persons */}
                             <div className="group">

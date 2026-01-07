@@ -1,107 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Navigation, Lock } from 'lucide-react';
-import type { SearchDetails, TaxiOption } from '../types';
+import { Navigation, Lock, RefreshCw, AlertCircle } from 'lucide-react';
+import type { SearchDetails } from '../types';
 import { useMobile } from '../hooks/useMobile';
 import TaxiHeader from '../Components/TaxiOptions/TaxiHeader';
 import MapView from '../Components/TaxiOptions/MapView';
 import Filters from '../Components/TaxiOptions/Filters';
 import TaxiCard from '../Components/TaxiOptions/TaxiCard';
 
-// Import taxi data
-const taxiOptions: TaxiOption[] = [
-    {
-        id: 1,
-        name: "Economy Sedan",
-        type: "Standard",
-        image: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400&h=250&fit=crop",
-        rating: 4.6,
-        reviews: 1234,
-        passengers: 4,
-        luggage: 2,
-        features: ["Air Conditioning", "GPS Navigation", "Clean Interior"],
-        baseFare: 25,
-        perKmRate: 2.0,
-        estimatedArrival: "5-7 mins"
-    },
-    {
-        id: 2,
-        name: "Comfort Sedan",
-        type: "Premium",
-        image: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400&h=250&fit=crop",
-        rating: 4.8,
-        reviews: 2156,
-        passengers: 4,
-        luggage: 3,
-        features: ["Air Conditioning", "GPS Navigation", "Leather Seats", "Premium Audio", "Free Water"],
-        baseFare: 35,
-        perKmRate: 2.5,
-        popular: true,
-        estimatedArrival: "3-5 mins"
-    },
-    {
-        id: 3,
-        name: "SUV",
-        type: "Spacious",
-        image: "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&h=250&fit=crop",
-        rating: 4.7,
-        reviews: 987,
-        passengers: 6,
-        luggage: 4,
-        features: ["Air Conditioning", "GPS Navigation", "Extra Space", "Child Seat Available", "Phone Charger"],
-        baseFare: 45,
-        perKmRate: 3.0,
-        estimatedArrival: "7-10 mins"
-    },
-    {
-        id: 4,
-        name: "Luxury Sedan",
-        type: "Executive",
-        image: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=400&h=250&fit=crop",
-        rating: 4.9,
-        reviews: 3421,
-        passengers: 4,
-        luggage: 3,
-        features: ["Chauffeur Service", "Leather Seats", "Premium Audio", "Bottled Water", "Newspaper", "WiFi"],
-        baseFare: 70,
-        perKmRate: 4.0,
-        popular: true,
-        estimatedArrival: "10-12 mins"
-    },
-    {
-        id: 5,
-        name: "Van/Minibus",
-        type: "Group",
-        image: "https://images.unsplash.com/photo-1527786356703-4b100091cd2c?w=400&h=250&fit=crop",
-        rating: 4.5,
-        reviews: 654,
-        passengers: 8,
-        luggage: 6,
-        features: ["Air Conditioning", "Extra Luggage Space", "Group Friendly", "Entertainment System"],
-        baseFare: 50,
-        perKmRate: 3.5,
-        estimatedArrival: "12-15 mins"
-    },
-    {
-        id: 6,
-        name: "Electric Vehicle",
-        type: "Eco-Friendly",
-        image: "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=400&h=250&fit=crop",
-        rating: 5.0,
-        reviews: 892,
-        passengers: 5,
-        luggage: 2,
-        features: ["Zero Emissions", "Silent Ride", "Premium Interior", "Fast Charging", "Sustainable"],
-        baseFare: 40,
-        perKmRate: 2.8,
-        estimatedArrival: "8-10 mins"
-    }
-];
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchTaxiProducts } from '../store/slices/shopifySlice';
+import { createCheckout } from '../store/slices/cartSlice';
 
 const TaxiOptions: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const isMobile = useMobile();
+
+    const dispatch = useAppDispatch();
+    const { products: taxiOptions, loading, error, initialized } = useAppSelector((state) => state.shopify);
+    const { loading: checkoutLoading, error: checkoutError, checkoutUrl } = useAppSelector((state) => state.cart);
 
     // State
     const [searchDetails, setSearchDetails] = useState<SearchDetails>({
@@ -118,6 +36,20 @@ const TaxiOptions: React.FC = () => {
     const [selectedTaxi, setSelectedTaxi] = useState<number | null>(null);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'price' | 'rating' | 'passengers'>('price');
+
+    // Fetch products from Shopify on mount
+    useEffect(() => {
+        if (!initialized) {
+            dispatch(fetchTaxiProducts());
+        }
+    }, [dispatch, initialized]);
+
+    // Redirect to Shopify checkout when URL is available
+    useEffect(() => {
+        if (checkoutUrl) {
+            window.location.href = checkoutUrl;
+        }
+    }, [checkoutUrl]);
 
     // Update search details from homepage
     useEffect(() => {
@@ -173,14 +105,16 @@ const TaxiOptions: React.FC = () => {
                 searchDetails.distance || 0
             );
 
-            // Navigate to payment page
-            navigate('/payment', {
-                state: {
-                    taxi: selectedTaxiData,
-                    search: searchDetails,
-                    totalPrice: totalPrice
-                }
-            });
+            // Create cart item
+            const cartItem = {
+                taxi: selectedTaxiData,
+                search: searchDetails,
+                totalPrice: totalPrice,
+                quantity: 1,
+            };
+
+            // Create checkout directly (no customer info needed for guest checkout)
+            dispatch(createCheckout({ item: cartItem }));
         }
     };
 
@@ -188,11 +122,84 @@ const TaxiOptions: React.FC = () => {
         navigate('/');
     };
 
+    const handleRetry = () => {
+        dispatch(fetchTaxiProducts());
+    };
+
     // Selected taxi data for booking bar
     const selectedTaxiData = taxiOptions.find(t => t.id === selectedTaxi) || null;
 
     const distance = searchDetails.distance || 18.5;
     const duration = searchDetails.duration || "25 mins";
+
+    // Loading state
+    if (loading && !initialized) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                <div className="text-center">
+                    <RefreshCw className="h-12 w-12 text-orange-600 animate-spin mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Loading Available Rides</h2>
+                    <p className="text-gray-600">Please wait while we fetch the latest options...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error && !loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+                    <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Oops! Something went wrong</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleRetry}
+                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                        >
+                            <RefreshCw className="h-5 w-5" />
+                            Try Again
+                        </button>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all"
+                        >
+                            Back to Home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // No products state
+    if (initialized && taxiOptions.length === 0 && !loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+                    <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">No Vehicles Available</h2>
+                    <p className="text-gray-600 mb-6">We couldn't find any taxi options at the moment. Please try again later.</p>
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleRetry}
+                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                        >
+                            <RefreshCw className="h-5 w-5" />
+                            Refresh
+                        </button>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all"
+                        >
+                            Back to Home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-16 pb-24">
@@ -319,6 +326,13 @@ const TaxiOptions: React.FC = () => {
                                         </div>
 
                                         <div className="p-4 space-y-3">
+                                            {/* Checkout Error */}
+                                            {checkoutError && (
+                                                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-3 flex items-start gap-2">
+                                                    <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                                                    <p className="text-red-700 text-sm">{checkoutError}</p>
+                                                </div>
+                                            )}
                                             {/* Selected Vehicle */}
                                             <div>
                                                 <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Selected Vehicle</p>
@@ -376,10 +390,20 @@ const TaxiOptions: React.FC = () => {
                                             {/* Proceed to Pay Button */}
                                             <button
                                                 onClick={handleProceedToPay}
-                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group mt-4"
+                                                disabled={checkoutLoading}
+                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                <Lock className="h-5 w-5" />
-                                                <span>Proceed to Pay</span>
+                                                {checkoutLoading ? (
+                                                    <>
+                                                        <RefreshCw className="h-5 w-5 animate-spin" />
+                                                        <span>Processing...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Lock className="h-5 w-5" />
+                                                        <span>Proceed to Pay</span>
+                                                    </>
+                                                )}
                                             </button>
 
                                             <p className="text-xs text-center text-gray-500">
@@ -423,6 +447,14 @@ const TaxiOptions: React.FC = () => {
             {isMobile && selectedTaxiData && (
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-2xl z-50 animate-slideUp">
                     <div className="container mx-auto px-4 py-4">
+                        {/* Checkout Error */}
+                        {checkoutError && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-start gap-2 mb-3">
+                                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-red-700 text-xs">{checkoutError}</p>
+                            </div>
+                        )}
+
                         <div className="flex items-center justify-between gap-4">
                             <div className="flex-1">
                                 <p className="text-xs text-gray-500 mb-1">Selected Vehicle</p>
@@ -435,10 +467,20 @@ const TaxiOptions: React.FC = () => {
                             </div>
                             <button
                                 onClick={handleProceedToPay}
-                                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
+                                disabled={checkoutLoading}
+                                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Lock className="h-4 w-4" />
-                                Proceed to Pay
+                                {checkoutLoading ? (
+                                    <>
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        <span>Processing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Lock className="h-4 w-4" />
+                                        <span>Proceed to Pay</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
