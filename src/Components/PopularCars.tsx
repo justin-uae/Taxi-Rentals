@@ -53,10 +53,10 @@ const PopularCars: React.FC = () => {
     // Get only popular products or first 6 products
     const displayedProducts = products
         .filter(product => product.popular)
-        .slice(0, 6);
+        .slice(0, 12);
 
     // If no popular products, show first 6
-    const carsToShow = displayedProducts.length > 0 ? displayedProducts : products.slice(0, 6);
+    const carsToShow = displayedProducts.length > 0 ? displayedProducts : products.slice(0, 12);
 
     return (
         <section className="py-16 lg:py-24 bg-white">
@@ -142,26 +142,6 @@ const PopularCars: React.FC = () => {
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Features */}
-                                        {car?.features && car.features.length > 0 && (
-                                            <div className="space-y-2">
-                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
-                                                    Features
-                                                </p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {car.features.slice(0, 3)?.map((feature, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 border border-gray-200"
-                                                        >
-                                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                                                            {feature}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* Hover Glow Effect */}

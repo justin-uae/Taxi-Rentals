@@ -456,6 +456,11 @@ const TaxiOptions: React.FC = () => {
                                                                     AED {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
                                                                 </span>
                                                             </div>
+                                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                                                                <p className="text-xs text-blue-700 font-medium">
+                                                                    Parking fees (if applicable) will be added to the final amount
+                                                                </p>
+                                                            </div>
                                                             <div className="flex justify-between pt-2 border-t border-gray-200">
                                                                 <span className="font-bold text-gray-900">Total Amount</span>
                                                                 <span className="text-xl font-bold text-orange-600">
@@ -464,12 +469,19 @@ const TaxiOptions: React.FC = () => {
                                                             </div>
                                                         </>
                                                     ) : (
-                                                        <div className="flex justify-between pt-2">
-                                                            <span className="font-bold text-gray-900">Total Amount</span>
-                                                            <span className="text-xl font-bold text-orange-600">
-                                                                AED {calculatePrice(selectedTaxiData, distance, 'one-way')}
-                                                            </span>
-                                                        </div>
+                                                        <>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-gray-900">Total Amount</span>
+                                                                <span className="text-xl font-bold text-orange-600">
+                                                                    AED {calculatePrice(selectedTaxiData, distance, 'one-way')}
+                                                                </span>
+                                                            </div>
+                                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                                                                <p className="text-xs text-blue-700 font-medium">
+                                                                    Parking fees (if applicable) will be added to the final amount
+                                                                </p>
+                                                            </div>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -530,7 +542,7 @@ const TaxiOptions: React.FC = () => {
             {/* Mobile Booking Bar - Updated with Proceed to Pay */}
             {isMobile && selectedTaxiData && (
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-2xl z-50 animate-slideUp">
-                    <div className="container mx-auto px-4 py-4">
+                    <div className="container mx-auto px-4 py-3">
                         {/* Checkout Error */}
                         {checkoutError && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-start gap-2 mb-3">
@@ -539,20 +551,20 @@ const TaxiOptions: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center justify-between gap-3 mb-2">
                             <div className="flex-1">
                                 <p className="text-xs text-gray-500 mb-1">Selected Vehicle</p>
-                                <p className="font-bold text-gray-900 truncate">{selectedTaxiData.name}</p>
+                                <p className="font-bold text-gray-900 truncate text-sm">{selectedTaxiData.name}</p>
                                 <p className="text-sm text-gray-600">
                                     <span className="font-bold text-orange-600">
-                                        AED {calculatePrice(selectedTaxiData, distance)}
+                                        AED {calculatePrice(selectedTaxiData, distance, searchDetails.tripType)}
                                     </span>
                                 </p>
                             </div>
                             <button
                                 onClick={handleProceedToPay}
                                 disabled={checkoutLoading}
-                                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-5 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
                                 {checkoutLoading ? (
                                     <>
@@ -566,6 +578,13 @@ const TaxiOptions: React.FC = () => {
                                     </>
                                 )}
                             </button>
+                        </div>
+
+                        {/* Parking Fee Notice */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                            <p className="text-[10px] text-blue-700 font-medium text-center">
+                                ℹParking fees (if applicable) will be added
+                            </p>
                         </div>
                     </div>
                 </div>
