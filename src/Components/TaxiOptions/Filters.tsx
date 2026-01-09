@@ -22,8 +22,7 @@ const Filters: React.FC<FiltersProps> = ({ activeFilter, sortBy, onFilterChange,
                         className="px-3 py-1.5 rounded-full border border-gray-300 bg-white text-xs font-medium"
                     >
                         <option value="price">Price</option>
-                        <option value="rating">Rating</option>
-                        <option value="passengers">Capacity</option>
+                        <option value="passengers">Seats</option>
                     </select>
                 </div>
             </div>
@@ -47,8 +46,7 @@ const Filters: React.FC<FiltersProps> = ({ activeFilter, sortBy, onFilterChange,
                     className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                     <option value="price">Sort by: Price (Low to High)</option>
-                    <option value="rating">Sort by: Rating</option>
-                    <option value="passengers">Sort by: Capacity</option>
+                    <option value="passengers">Sort by: Seats</option>
                 </select>
             </div>
         </div>

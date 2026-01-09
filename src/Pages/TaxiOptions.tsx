@@ -31,7 +31,8 @@ const TaxiOptions: React.FC = () => {
         distance: 18.5,
         duration: "25 mins",
         date: "01/15/2025",
-        time: "10:00 AM"
+        time: "10:00 AM",
+        passengers: 1
     });
 
     const [selectedTaxi, setSelectedTaxi] = useState<number | null>(null);
@@ -61,13 +62,15 @@ const TaxiOptions: React.FC = () => {
                 fromCoords: state.fromCoords || { lat: 25.2532, lng: 55.3657 },
                 toCoords: state.toCoords || { lat: 25.1972, lng: 55.2744 },
                 distance: state.distance || 18.5,
-                duration: state.duration || "25 mins"
+                duration: state.duration || "25 mins",
+                passengers: state.passengers || 1
             });
         }
     }, [location]);
 
     const distance = searchDetails.distance || 18.5;
     const duration = searchDetails.duration || "25 mins";
+    const requiredPassengers = searchDetails.passengers || 1;
 
     const taxiOptionsWithVariants = useMemo(() => {
         if (!distance || distance <= 0) {
@@ -75,29 +78,32 @@ const TaxiOptions: React.FC = () => {
             return taxiOptions;
         }
 
-        return taxiOptions.map(taxi => {
-            // If no variants available, return taxi as-is
-            if (!taxi.variants || taxi.variants.length === 0) {
-                console.warn(`No variants found for ${taxi.name}`);
-                return taxi;
-            }
+        return taxiOptions
+            // Filter by passenger capacity FIRST
+            .filter(taxi => taxi.passengers >= requiredPassengers)
+            .map(taxi => {
+                // If no variants available, return taxi as-is
+                if (!taxi.variants || taxi.variants.length === 0) {
+                    console.warn(`No variants found for ${taxi.name}`);
+                    return taxi;
+                }
 
-            // Select the matching variant based on trip distance
-            const matchingVariant = selectVariantByDistance(taxi.variants, distance);
+                // Select the matching variant based on trip distance
+                const matchingVariant = selectVariantByDistance(taxi.variants, distance);
 
-            if (!matchingVariant) {
-                console.warn(`No matching variant for ${taxi.name} at ${distance} km`);
-                return taxi;
-            }
-            // Return taxi with the selected variant
-            return {
-                ...taxi,
-                shopifyId: matchingVariant.id,
-                selectedVariant: matchingVariant,
-                displayPrice: matchingVariant.price // Use variant price instead of calculated
-            } as TaxiOption & { selectedVariant?: any; displayPrice?: number };
-        });
-    }, [taxiOptions, distance]);
+                if (!matchingVariant) {
+                    console.warn(`No matching variant for ${taxi.name} at ${distance} km`);
+                    return taxi;
+                }
+                // Return taxi with the selected variant
+                return {
+                    ...taxi,
+                    shopifyId: matchingVariant.id,
+                    selectedVariant: matchingVariant,
+                    displayPrice: matchingVariant.price // Use variant price instead of calculated
+                } as TaxiOption & { selectedVariant?: any; displayPrice?: number };
+            });
+    }, [taxiOptions, distance, requiredPassengers]);
 
     // Calculate price helper function (now uses variant price if available)
     const calculatePrice = (taxi: TaxiOption & { displayPrice?: number }, distance: number, tripType?: 'one-way' | 'return') => {
@@ -214,13 +220,16 @@ const TaxiOptions: React.FC = () => {
     }
 
     // No products state
-    if (initialized && taxiOptions.length === 0 && !loading) {
+    if (initialized && taxiOptionsWithVariants.length === 0 && !loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
                 <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
                     <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">No Vehicles Available</h2>
-                    <p className="text-gray-600 mb-6">We couldn't find any taxi options at the moment. Please try again later.</p>
+                    <p className="text-gray-600 mb-6">
+                        We couldn't find any vehicles that can accommodate {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''}.
+                        Please try with fewer passengers or contact us for assistance.
+                    </p>
                     <div className="space-y-3">
                         <button
                             onClick={handleRetry}
@@ -233,7 +242,7 @@ const TaxiOptions: React.FC = () => {
                             onClick={() => navigate('/')}
                             className="w-full bg-gray-200 text-gray-800 font-bold py-3 px-6 rounded-xl hover:bg-gray-300 transition-all"
                         >
-                            Back to Home
+                            Change Search
                         </button>
                     </div>
                 </div>
@@ -286,7 +295,7 @@ const TaxiOptions: React.FC = () => {
                                 Available Rides ({filteredAndSortedTaxiOptions.length})
                             </h1>
                             <p className="text-gray-600 text-sm">
-                                Select your preferred vehicle • {distance.toFixed(1)} km range
+                                Showing vehicles for {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''} • {distance.toFixed(1)} km range
                             </p>
                         </div>
 
@@ -327,7 +336,7 @@ const TaxiOptions: React.FC = () => {
                                     Available Rides <span className="text-orange-600">({filteredAndSortedTaxiOptions.length})</span>
                                 </h1>
                                 <p className="text-gray-600 mb-4">
-                                    Showing vehicles for {distance.toFixed(1)} km distance range
+                                    Showing vehicles for {requiredPassengers} passenger{requiredPassengers > 1 ? 's' : ''} • {distance.toFixed(1)} km distance range
                                 </p>
 
                                 {/* Filters */}
@@ -384,7 +393,7 @@ const TaxiOptions: React.FC = () => {
                                                     <img
                                                         src={selectedTaxiData.image}
                                                         alt={selectedTaxiData.name}
-                                                        className="w-16 h-10 object-cover rounded-lg"
+                                                        className="w-16 h-10 object-contain rounded-lg"
                                                     />
                                                     <div className="flex-1">
                                                         <p className="font-bold text-gray-900">{selectedTaxiData.name}</p>
@@ -583,7 +592,7 @@ const TaxiOptions: React.FC = () => {
                         {/* Parking Fee Notice */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
                             <p className="text-[10px] text-blue-700 font-medium text-center">
-                                ℹParking fees (if applicable) will be added
+                                Parking fees (if applicable) will be added
                             </p>
                         </div>
                     </div>

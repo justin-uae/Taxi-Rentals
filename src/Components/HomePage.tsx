@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate } from 'lucide-react';
-import Banner3 from '../assets/Banner3.png';
+import Banner5 from '../assets/Banner5.png';
 
 declare global {
     interface Window {
@@ -903,7 +903,7 @@ const Homepage: React.FC = () => {
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => setNumberOfPersons(Math.min(8, numberOfPersons + 1))}
+                                        onClick={() => setNumberOfPersons(Math.min(50, numberOfPersons + 1))}
                                         className="w-12 h-12 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-xl text-gray-700 hover:text-green-600"
                                     >
                                         +
@@ -952,13 +952,12 @@ const Homepage: React.FC = () => {
                     {/* Right Column - Hero Image */}
                     <div className="hidden md:table-cell relative w-full order-1 lg:order-2">
                         <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-400/20 rounded-[40px] lg:rounded-[60px] blur-3xl"></div>
+                            {/* <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-400/20 rounded-[40px] lg:rounded-[60px] blur-3xl"></div> */}
                             <img
-                                src={Banner3}
+                                src={Banner5}
                                 alt="Orange Jeep Wrangler"
                                 className="w-full h-auto object-cover relative z-10 rounded-[30px] md:rounded-[50px] lg:rounded-[100px]"
                                 style={{
-                                    filter: 'drop-shadow(0px 10px 30px rgba(0,0,0,0.15))',
                                     maxWidth: '100%',
                                     marginLeft: 'auto',
                                     marginRight: 'auto'
