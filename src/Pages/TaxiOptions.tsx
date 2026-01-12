@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Navigation, Lock, RefreshCw, AlertCircle } from 'lucide-react';
+import { Navigation, Lock, RefreshCw, AlertCircle, Plane } from 'lucide-react';
 import type { SearchDetails, TaxiOption } from '../types';
 import { useMobile } from '../hooks/useMobile';
 import TaxiHeader from '../Components/TaxiOptions/TaxiHeader';
@@ -39,6 +39,21 @@ const TaxiOptions: React.FC = () => {
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'price' | 'rating' | 'passengers'>('price');
 
+    // Airport-related states
+    const [parkingAcknowledged, setParkingAcknowledged] = useState<boolean>(false);
+    const [flightNumber, setFlightNumber] = useState<string>('');
+
+    // Check if either location is an airport
+    const isAirportTrip = useMemo(() => {
+        const airportKeywords = ['airport', 'dxb', 'dwc', 'auh', 'shj', 'terminal'];
+        const fromLower = searchDetails.from.toLowerCase();
+        const toLower = searchDetails.to.toLowerCase();
+
+        return airportKeywords.some(keyword =>
+            fromLower.includes(keyword) || toLower.includes(keyword)
+        );
+    }, [searchDetails.from, searchDetails.to]);
+
     // Fetch products from Shopify on mount
     useEffect(() => {
         if (!initialized) {
@@ -67,6 +82,14 @@ const TaxiOptions: React.FC = () => {
             });
         }
     }, [location]);
+
+    // Reset airport fields when taxi selection changes
+    useEffect(() => {
+        if (selectedTaxi === null) {
+            setParkingAcknowledged(false);
+            setFlightNumber('');
+        }
+    }, [selectedTaxi]);
 
     const distance = searchDetails.distance || 18.5;
     const duration = searchDetails.duration || "25 mins";
@@ -149,15 +172,33 @@ const TaxiOptions: React.FC = () => {
     };
 
     const handleProceedToPay = () => {
+        // Validate airport requirements
+        if (isAirportTrip) {
+            if (!parkingAcknowledged) {
+                alert('Please acknowledge that parking fees will be collected separately.');
+                return;
+            }
+            if (!flightNumber.trim()) {
+                alert('Please enter your flight number for airport pickup/drop-off.');
+                return;
+            }
+        }
+
         const selectedTaxiData = taxiOptionsWithVariants.find(taxi => taxi.id === selectedTaxi);
         if (selectedTaxiData) {
             const tripType = searchDetails.tripType || 'one-way';
             const totalPrice = calculatePrice(selectedTaxiData, distance, tripType);
 
-            // Create cart item
+            // Create cart item with airport details
             const cartItem = {
                 taxi: selectedTaxiData,
-                search: searchDetails,
+                search: {
+                    ...searchDetails,
+                    ...(isAirportTrip && {
+                        flightNumber: flightNumber.trim(),
+                        parkingAcknowledged: true
+                    })
+                },
                 totalPrice: totalPrice,
                 quantity: 1,
             };
@@ -173,6 +214,16 @@ const TaxiOptions: React.FC = () => {
 
     const handleRetry = () => {
         dispatch(fetchTaxiProducts());
+    };
+
+    // Check if proceed button should be disabled
+    const isProceedDisabled = () => {
+        if (checkoutLoading) return true;
+        if (!selectedTaxi) return true;
+        if (isAirportTrip) {
+            return !parkingAcknowledged || !flightNumber.trim();
+        }
+        return false;
     };
 
     // Selected taxi data for booking bar
@@ -289,6 +340,54 @@ const TaxiOptions: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Airport Information - Mobile */}
+                        {isAirportTrip && selectedTaxi && (
+                            <div className="mb-4">
+                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Plane className="h-5 w-5 text-blue-600" />
+                                        <h4 className="font-bold text-gray-900">Airport Trip Information</h4>
+                                    </div>
+
+                                    {/* Parking Fee Checkbox */}
+                                    <label className="flex items-start gap-3 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            checked={parkingAcknowledged}
+                                            onChange={(e) => setParkingAcknowledged(e.target.checked)}
+                                            className="mt-1 h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                                        />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                                                I acknowledge that parking fees will be collected separately
+                                            </p>
+                                            <p className="text-xs text-gray-600 mt-1">
+                                                Airport parking charges (if applicable) will be paid directly to the driver
+                                            </p>
+                                        </div>
+                                    </label>
+
+                                    {/* Flight Number Input */}
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                            Flight Number <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={flightNumber}
+                                            onChange={(e) => setFlightNumber(e.target.value)}
+                                            placeholder="e.g., EK524, FZ123"
+                                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm font-medium uppercase"
+                                            style={{ textTransform: 'uppercase' }}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1.5">
+                                            Required for airport pickup/drop-off tracking
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Header */}
                         <div className="mb-4">
                             <h1 className="text-xl font-bold text-gray-900 mb-1">
@@ -386,6 +485,53 @@ const TaxiOptions: React.FC = () => {
                                                     <p className="text-red-700 text-sm">{checkoutError}</p>
                                                 </div>
                                             )}
+
+                                            {/* Airport Information Form - Desktop */}
+                                            {isAirportTrip && (
+                                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Plane className="h-5 w-5 text-blue-600" />
+                                                        <h4 className="font-bold text-gray-900">Airport Trip Information</h4>
+                                                    </div>
+
+                                                    {/* Parking Fee Checkbox */}
+                                                    <label className="flex items-start gap-3 cursor-pointer group">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={parkingAcknowledged}
+                                                            onChange={(e) => setParkingAcknowledged(e.target.checked)}
+                                                            className="mt-1 h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                                                                I acknowledge that parking fees will be collected separately
+                                                            </p>
+                                                            <p className="text-xs text-gray-600 mt-1">
+                                                                Airport parking charges (if applicable) will be paid directly to the driver
+                                                            </p>
+                                                        </div>
+                                                    </label>
+
+                                                    {/* Flight Number Input */}
+                                                    <div>
+                                                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                                            Flight Number <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={flightNumber}
+                                                            onChange={(e) => setFlightNumber(e.target.value)}
+                                                            placeholder="e.g., EK524, FZ123"
+                                                            className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm font-medium uppercase"
+                                                            style={{ textTransform: 'uppercase' }}
+                                                        />
+                                                        <p className="text-xs text-gray-500 mt-1.5">
+                                                            Required for airport pickup/drop-off tracking
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Selected Vehicle */}
                                             <div>
                                                 <p className="text-xs text-gray-500 mb-2 uppercase font-semibold">Selected Vehicle</p>
@@ -465,11 +611,13 @@ const TaxiOptions: React.FC = () => {
                                                                     AED {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
                                                                 </span>
                                                             </div>
-                                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
-                                                                <p className="text-xs text-blue-700 font-medium">
-                                                                    Parking fees (if applicable) will be added to the final amount
-                                                                </p>
-                                                            </div>
+                                                            {!isAirportTrip && (
+                                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                                                                    <p className="text-xs text-blue-700 font-medium">
+                                                                        Parking fees (if applicable) will be added to the final amount
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                             <div className="flex justify-between pt-2 border-t border-gray-200">
                                                                 <span className="font-bold text-gray-900">Total Amount</span>
                                                                 <span className="text-xl font-bold text-orange-600">
@@ -485,11 +633,13 @@ const TaxiOptions: React.FC = () => {
                                                                     AED {calculatePrice(selectedTaxiData, distance, 'one-way')}
                                                                 </span>
                                                             </div>
-                                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
-                                                                <p className="text-xs text-blue-700 font-medium">
-                                                                    Parking fees (if applicable) will be added to the final amount
-                                                                </p>
-                                                            </div>
+                                                            {!isAirportTrip && (
+                                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                                                                    <p className="text-xs text-blue-700 font-medium">
+                                                                        Parking fees (if applicable) will be added to the final amount
+                                                                    </p>
+                                                                </div>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
@@ -498,8 +648,8 @@ const TaxiOptions: React.FC = () => {
                                             {/* Proceed to Pay Button */}
                                             <button
                                                 onClick={handleProceedToPay}
-                                                disabled={checkoutLoading}
-                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled={isProceedDisabled()}
+                                                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 group mt-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                             >
                                                 {checkoutLoading ? (
                                                     <>
@@ -572,7 +722,7 @@ const TaxiOptions: React.FC = () => {
                             </div>
                             <button
                                 onClick={handleProceedToPay}
-                                disabled={checkoutLoading}
+                                disabled={isProceedDisabled()}
                                 className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-5 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
                                 {checkoutLoading ? (
@@ -589,12 +739,14 @@ const TaxiOptions: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Parking Fee Notice */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                            <p className="text-[10px] text-blue-700 font-medium text-center">
-                                Parking fees (if applicable) will be added
-                            </p>
-                        </div>
+                        {/* Parking Fee Notice - Only show for non-airport trips */}
+                        {!isAirportTrip && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                                <p className="text-[10px] text-blue-700 font-medium text-center">
+                                    Parking fees (if applicable) will be added
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 
 const PopularCars: React.FC = () => {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const { products, loading, error, initialized } = useAppSelector((state) => state.shopify);
 
     // Fetch products on mount
@@ -13,6 +15,10 @@ const PopularCars: React.FC = () => {
             dispatch(fetchTaxiProducts());
         }
     }, [dispatch, initialized]);
+
+    const handleRentClick = (carId: number) => {
+        navigate(`/car-rental/${carId}`);
+    };
 
     // Loading state
     if (loading && !initialized) {
@@ -53,10 +59,10 @@ const PopularCars: React.FC = () => {
     // Get only popular products or first 6 products
     const displayedProducts = products
         .filter(product => product.popular)
-        .slice(0, 12);
+        .slice(0, 25);
 
     // If no popular products, show first 6
-    const carsToShow = displayedProducts.length > 0 ? displayedProducts : products.slice(0, 12);
+    const carsToShow = displayedProducts.length > 0 ? displayedProducts : products.slice(0, 25);
 
     return (
         <section className="py-16 lg:py-24 bg-white">
@@ -78,7 +84,7 @@ const PopularCars: React.FC = () => {
                 {carsToShow.length > 0 ? (
                     <>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                            {carsToShow?.map((car) => (
+                            {carsToShow?.sort((a, b) => a.passengers - b.passengers).map((car) => (
                                 <div
                                     key={car?.id}
                                     className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-orange-200"
@@ -142,6 +148,14 @@ const PopularCars: React.FC = () => {
                                                 </div>
                                             </div>
                                         </div>
+                                        {/* Rent Button */}
+                                        <button
+                                            onClick={() => handleRentClick(car?.id)}
+                                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] flex items-center justify-center gap-2"
+                                        >
+                                            <Calendar className="h-5 w-5" />
+                                            Rent for a Day
+                                        </button>
                                     </div>
 
                                     {/* Hover Glow Effect */}

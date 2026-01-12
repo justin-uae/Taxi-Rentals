@@ -28,12 +28,6 @@ export const selectVariantByDistance = (
     );
 
     if (matchingVariant) {
-        console.log(' Variant selected:', {
-            distance: `${distance} km`,
-            variant: matchingVariant.title,
-            range: `${matchingVariant.kmRangeMin}-${matchingVariant.kmRangeMax} km`,
-            price: `${matchingVariant.price} AED`
-        });
         return matchingVariant;
     }
 

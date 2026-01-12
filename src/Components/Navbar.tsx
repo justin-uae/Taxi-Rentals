@@ -126,7 +126,6 @@ const Navbar: React.FC = () => {
                                 >
                                     Home
                                 </Link>
-
                                 <Link
                                     to="/about"
                                     onClick={handleLinkClick}
