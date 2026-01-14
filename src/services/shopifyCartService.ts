@@ -26,7 +26,7 @@ export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput =>
         merchandiseId: cartItem.taxi.shopifyId || '', // Variant ID
         quantity: isReturn ? 2 : 1, // 2 for return trips!
         attributes: [
-            { key: 'booking_type', value: 'Taxi Booking' },
+            { key: 'booking_type', value: 'Transport Booking' },
             { key: 'trip_type', value: isReturn ? 'Round Trip' : 'One-Way' },
             { key: 'vehicle', value: cartItem.taxi.name },
             { key: 'from_location', value: cartItem.search.from },
@@ -96,7 +96,7 @@ export const createCart = async (cartItem: CartItem, email?: string): Promise<st
             { key: 'calculated_total', value: `${cartItem.totalPrice}` },
         ],
         note: cartItem.search.tripType === 'return'
-            ? `Round Trip Taxi Booking: ${cartItem.taxi.name}
+            ? `Round Trip Transport Booking: ${cartItem.taxi.name}
 From: ${cartItem.search.from}
 To: ${cartItem.search.to}
 Distance: ${cartItem.search.distance || 0} km (each way)
@@ -113,7 +113,7 @@ Fare Calculation:
 Trip Fare (${cartItem.search.distance || 0} km): AED ${cartItem.totalPrice / 2}
 Quantity: 2 trips (Round Trip)
 Total Fare: AED ${cartItem.totalPrice}`
-            : `Taxi Booking: ${cartItem.taxi.name}
+            : `Transport Booking: ${cartItem.taxi.name}
 From: ${cartItem.search.from}
 To: ${cartItem.search.to}
 Distance: ${cartItem.search.distance || 0} km

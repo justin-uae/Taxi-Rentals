@@ -29,7 +29,7 @@ function App() {
             {/* <Route path="/login" element={<Login />} /> */}
             {/* <Route path="/register" element={<Register />} /> */}
             <Route path="/fleet" element={<OurFleet />} />
-            <Route path="/taxi-options" element={<TaxiOptions />} />
+            <Route path="/transport-options" element={<TaxiOptions />} />
             <Route path="/car-rental/:carId" element={<CarRentalDetails />} />
             <Route path="/payment" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />

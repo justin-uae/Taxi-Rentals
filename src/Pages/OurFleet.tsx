@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Filter, X } from 'lucide-react';
+import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Filter, X, Calendar } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
+import { useNavigate } from 'react-router-dom';
 
 const OurFleet: React.FC = () => {
     const dispatch = useAppDispatch();
     const { products, loading, error, initialized } = useAppSelector((state) => state.shopify);
 
     const [filterType, setFilterType] = useState<string>('all');
-    const [sortBy, setSortBy] = useState<string>('popular');
+    const [sortBy, setSortBy] = useState<string>('passengers-low');
+    const navigate = useNavigate();
 
     // Fetch products on mount
     useEffect(() => {
@@ -33,12 +35,18 @@ const OurFleet: React.FC = () => {
                     return a.baseFare - b.baseFare;
                 case 'price-high':
                     return b.baseFare - a.baseFare;
-                case 'passengers':
+                case 'passengers-low':
+                    return a.passengers - b.passengers;
+                case 'passengers-high':
                     return b.passengers - a.passengers;
                 default:
                     return 0;
             }
         });
+
+    const handleRentClick = (carId: number) => {
+        navigate(`/car-rental/${carId}`);
+    };
 
     // Loading state
     if (loading && !initialized) {
@@ -109,8 +117,8 @@ const OurFleet: React.FC = () => {
                                         key={type}
                                         onClick={() => setFilterType(type)}
                                         className={`px-4 py-2 rounded-xl font-medium transition-all text-sm ${filterType === type
-                                                ? 'bg-orange-500 text-white shadow-lg'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            ? 'bg-orange-500 text-white shadow-lg'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                             }`}
                                     >
                                         {type === 'all' ? 'All Vehicles' : type}
@@ -129,11 +137,12 @@ const OurFleet: React.FC = () => {
                                 onChange={(e) => setSortBy(e.target.value)}
                                 className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 font-medium"
                             >
+                                <option value="passengers-low">Least Passengers</option>
                                 <option value="popular">Most Popular</option>
                                 <option value="rating">Highest Rated</option>
                                 <option value="price-low">Price: Low to High</option>
                                 <option value="price-high">Price: High to Low</option>
-                                <option value="passengers">Most Passengers</option>
+                                <option value="passengers-high">Most Passengers</option>
                             </select>
                         </div>
                     </div>
@@ -194,7 +203,7 @@ const OurFleet: React.FC = () => {
                                 </div>
 
                                 {/* Car Details */}
-                                <div className="p-4 sm:p-5">
+                                <div className="p-4">
                                     {/* Name & Rating */}
                                     <div className="mb-3">
                                         <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
@@ -229,10 +238,18 @@ const OurFleet: React.FC = () => {
                                                 <span className="text-xs font-semibold">{car.luggage} bags</span>
                                             </div>
                                         </div>
+
+                                        {/* Driver Included Badge */}
+                                        <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl py-2 px-3">
+                                            <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                            <span className="text-xs font-bold text-orange-700">Professional Driver Included</span>
+                                        </div>
                                     </div>
 
                                     {/* Pricing */}
-                                    <div className="mb-3 pb-3 border-b border-gray-100">
+                                    <div className="mb-3">
                                         <div className="flex items-baseline gap-1">
                                             <span className="text-xs text-gray-500">Starting from</span>
                                             <span className="text-lg font-bold text-orange-600">
@@ -243,6 +260,15 @@ const OurFleet: React.FC = () => {
                                             + AED {car.perKmRate}/km
                                         </p>
                                     </div>
+
+                                    {/* Rent Button */}
+                                    <button
+                                        onClick={() => handleRentClick(car?.id)}
+                                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] flex items-center justify-center gap-2 text-sm"
+                                    >
+                                        <Calendar className="h-4 w-4" />
+                                        Rent for a Day
+                                    </button>
                                 </div>
                             </div>
                         ))}

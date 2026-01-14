@@ -19,7 +19,7 @@ const NotFound: React.FC = () => {
                     >
                         <img
                             src={NotFoundIMG2}
-                            alt="404 Not Found - Lost Taxi"
+                            alt="404 Not Found - Lost Transport"
                             className="w-full h-full object-contain animate-wiggle"
                             style={{ animationDuration: '8s' }}
                         />
@@ -63,7 +63,7 @@ const NotFound: React.FC = () => {
 
                     <div className="max-w-lg mx-auto pt-2">
                         <p className="text-base md:text-lg text-gray-500 leading-relaxed animate-fade-in-delay-2">
-                            Looks like this page took a wrong turn. Don't worry, our taxi drivers are experts at finding the right route. Let's get you back on track!
+                            Looks like this page took a wrong turn. Don't worry, our cab drivers are experts at finding the right route. Let's get you back on track!
                         </p>
                     </div>
                 </div>

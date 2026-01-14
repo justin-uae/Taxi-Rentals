@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     MapPin, Calendar, Clock, Users, Briefcase, Star,
-    ArrowLeft, Lock, RefreshCw, AlertCircle, CheckCircle, Locate
+    ArrowLeft, Lock, RefreshCw, AlertCircle, CheckCircle, Locate, Plane
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 import { createCheckout } from '../store/slices/cartSlice';
+import { FaWhatsapp } from 'react-icons/fa';
 
 interface RentalDetails {
     pickupLocation: string;
@@ -53,6 +54,13 @@ const CarRentalDetails: React.FC = () => {
 
     const [isGettingLocation, setIsGettingLocation] = useState(false);
 
+    // Airport-related states
+    const [parkingAcknowledged, setParkingAcknowledged] = useState<boolean>(false);
+    const [flightNumber, setFlightNumber] = useState<string>('');
+
+    // Rental type state
+    const [rentalType, setRentalType] = useState<'fixed' | 'flexible'>('fixed');
+
     // Date picker states
     const [showPickupDatePicker, setShowPickupDatePicker] = useState(false);
     const [showDropoffDatePicker, setShowDropoffDatePicker] = useState(false);
@@ -89,6 +97,14 @@ const CarRentalDetails: React.FC = () => {
 
     const timeSlots = generateTimeSlots();
 
+    // Check if pickup location is an airport
+    const isAirportTrip = useMemo(() => {
+        const airportKeywords = ['airport', 'dxb', 'dwc', 'auh', 'shj', 'terminal'];
+        const locationLower = rentalDetails.pickupLocation.toLowerCase();
+
+        return airportKeywords.some(keyword => locationLower.includes(keyword));
+    }, [rentalDetails.pickupLocation]);
+
     // Fetch products if not initialized
     useEffect(() => {
         if (!initialized) {
@@ -98,7 +114,19 @@ const CarRentalDetails: React.FC = () => {
 
     // Initialize Google Maps Places Autocomplete
     useEffect(() => {
+        let checkInterval: any | null = null;
+
         const loadGoogleMapsScript = () => {
+            // If Google Maps is already fully loaded, initialize immediately
+            if (window.google?.maps?.places) {
+                console.log('Google Maps already loaded, initializing...');
+                // Use requestAnimationFrame to ensure DOM is ready
+                requestAnimationFrame(() => {
+                    initAutocomplete();
+                });
+                return;
+            }
+
             const existingScript = document.getElementById('google-maps-script');
 
             if (!existingScript) {
@@ -109,20 +137,57 @@ const CarRentalDetails: React.FC = () => {
                 script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapAPIKey}&libraries=places,geocoding`;
                 script.async = true;
                 script.defer = true;
-                script.onload = initAutocomplete;
+                script.onload = () => {
+                    // Use requestAnimationFrame to ensure DOM is ready
+                    requestAnimationFrame(() => {
+                        initAutocomplete();
+                    });
+                };
                 document.head.appendChild(script);
-            } else if (window.google) {
-                initAutocomplete();
+            } else {
+                // Script exists, poll until Google Maps is ready
+                checkInterval = setInterval(() => {
+                    if (window.google?.maps?.places) {
+                        clearInterval(checkInterval!);
+                        // Use requestAnimationFrame to ensure DOM is ready
+                        requestAnimationFrame(() => {
+                            initAutocomplete();
+                        });
+                    }
+                }, 100);
+
+                // Clear interval after 10 seconds
+                setTimeout(() => {
+                    if (checkInterval) {
+                        clearInterval(checkInterval);
+                        console.error('Timeout waiting for Google Maps');
+                    }
+                }, 10000);
             }
         };
 
         const initAutocomplete = () => {
             if (!window.google || !window.google.maps || !window.google.maps.places) {
+                console.warn('Google Maps not available in initAutocomplete');
                 return;
             }
 
-            // Initialize pickup autocomplete
-            if (pickupInputRef.current && !pickupAutocompleteRef.current) {
+            // Check if input ref is available
+            if (!pickupInputRef.current) {
+                console.warn('Pickup input ref not available, retrying...');
+                // Retry after a short delay
+                setTimeout(() => {
+                    initAutocomplete();
+                }, 100);
+                return;
+            }
+
+            // Clear any existing autocomplete instance
+            if (pickupAutocompleteRef.current) {
+                window.google.maps.event.clearInstanceListeners(pickupAutocompleteRef.current);
+                pickupAutocompleteRef.current = null;
+            }
+            try {
                 pickupAutocompleteRef.current = new window.google.maps.places.Autocomplete(
                     pickupInputRef.current,
                     {
@@ -147,10 +212,19 @@ const CarRentalDetails: React.FC = () => {
                         }));
                     }
                 });
+            } catch (error) {
+                console.error('Error initializing autocomplete:', error);
             }
         };
 
         loadGoogleMapsScript();
+
+        // Cleanup
+        return () => {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+        };
     }, []);
 
     // Get current location using Geolocation API
@@ -313,7 +387,16 @@ const CarRentalDetails: React.FC = () => {
     const totalPrice = dailyRate * rentalDetails.numberOfDays;
 
     const isFormValid = () => {
-        return (
+        // For flexible rentals, only require pickup location and date
+        if (rentalType === 'flexible') {
+            return (
+                rentalDetails.pickupLocation.trim() !== '' &&
+                rentalDetails.pickupDate
+            );
+        }
+
+        // For fixed rentals, require all fields
+        const baseValid = (
             rentalDetails.pickupLocation.trim() !== '' &&
             rentalDetails.pickupDate &&
             rentalDetails.dropoffDate &&
@@ -321,10 +404,27 @@ const CarRentalDetails: React.FC = () => {
             rentalDetails.dropoffTime !== '' &&
             rentalDetails.numberOfDays > 0
         );
+
+        // Additional validation for airport trips
+        if (isAirportTrip) {
+            return baseValid && parkingAcknowledged && flightNumber.trim() !== '';
+        }
+
+        return baseValid;
     };
 
     const handleCheckout = () => {
         if (!isFormValid()) {
+            if (isAirportTrip) {
+                if (!parkingAcknowledged) {
+                    alert('Please acknowledge that parking fees will be collected separately.');
+                    return;
+                }
+                if (!flightNumber.trim()) {
+                    alert('Please enter your flight number for airport pickup/drop-off.');
+                    return;
+                }
+            }
             alert('Please fill in all required fields');
             return;
         }
@@ -352,12 +452,46 @@ const CarRentalDetails: React.FC = () => {
                 dropoffDate: formatDate(rentalDetails.dropoffDate),
                 dropoffTime: formatTime12Hour(rentalDetails.dropoffTime),
                 rentalType: 'daily',
+                ...(isAirportTrip && {
+                    flightNumber: flightNumber.trim(),
+                    parkingAcknowledged: true
+                })
             },
             totalPrice: totalPrice,
             quantity: rentalDetails.numberOfDays,
         };
 
         dispatch(createCheckout({ item: cartItem }));
+    };
+
+    const handleWhatsAppQuote = () => {
+        if (!isFormValid()) {
+            alert('Please fill in the required fields (pickup location and date)');
+            return;
+        }
+
+        if (!selectedCar) {
+            alert('Car not found');
+            return;
+        }
+
+        // Generate WhatsApp message
+        const message = `Hi! I'd like to request a quote for car rental:
+
+*Vehicle:* ${selectedCar.name}
+*Pickup Location:* ${rentalDetails.pickupLocation}
+*Pickup Date:* ${formatDate(rentalDetails.pickupDate)}
+*Pickup Time:* ${formatTime12Hour(rentalDetails.pickupTime)}
+${isAirportTrip ? `*Flight Number:* ${flightNumber}\n` : ''}
+*Rental Duration:* Flexible (To be discussed)
+
+Please provide me with pricing options and availability.`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappNumber = '971504066630'; // Replace with your actual WhatsApp number
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+
+        window.open(whatsappUrl, '_blank');
     };
 
     const pickupCalendarDays = generateCalendar(currentPickupMonth);
@@ -413,7 +547,7 @@ const CarRentalDetails: React.FC = () => {
                         {/* Car Image & Info Card */}
                         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                             {/* Car Image */}
-                            <div className="relative h-80 bg-gradient-to-br from-gray-100 to-gray-200">
+                            <div className="relative h-auto bg-gradient-to-br from-gray-100 to-gray-200">
                                 <img
                                     src={selectedCar?.image}
                                     alt={selectedCar?.name}
@@ -427,49 +561,49 @@ const CarRentalDetails: React.FC = () => {
                             </div>
 
                             {/* Car Info */}
-                            <div className="p-6 lg:p-8">
-                                <div className="flex items-start justify-between mb-6">
+                            <div className="p-4 sm:p-6 lg:p-8">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-4">
                                     <div>
-                                        <h1 className="text-3xl font-bold text-gray-900 mb-2">{selectedCar?.name}</h1>
-                                        <p className="text-lg text-gray-600">{selectedCar?.type}</p>
+                                        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">{selectedCar?.name}</h1>
+                                        <p className="text-sm sm:text-base lg:text-lg text-gray-600">{selectedCar?.type}</p>
                                     </div>
-                                    <div className="flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-xl">
-                                        <Star className="h-5 w-5 fill-orange-500 text-orange-500" />
-                                        <span className="text-lg font-bold text-orange-600">{selectedCar?.rating}</span>
-                                        <span className="text-sm text-gray-500">({selectedCar?.reviews})</span>
+                                    <div className="flex items-center gap-2 bg-orange-50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl w-fit">
+                                        <Star className="h-4 w-4 sm:h-5 sm:w-5 fill-orange-500 text-orange-500" />
+                                        <span className="text-base sm:text-lg font-bold text-orange-600">{selectedCar?.rating}</span>
+                                        <span className="text-xs sm:text-sm text-gray-500">({selectedCar?.reviews})</span>
                                     </div>
                                 </div>
 
                                 {/* Specifications */}
-                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                    <div className="bg-blue-50 rounded-xl p-4 flex items-center gap-3">
-                                        <div className="p-3 bg-blue-100 rounded-lg">
-                                            <Users className="h-6 w-6 text-blue-600" />
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                                    <div className="bg-blue-50 rounded-xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                                        <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                                            <Users className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600">Passengers</p>
-                                            <p className="text-lg font-bold text-gray-900">{selectedCar?.passengers}</p>
+                                            <p className="text-xs sm:text-sm text-gray-600">Passengers</p>
+                                            <p className="text-base sm:text-lg font-bold text-gray-900">{selectedCar?.passengers}</p>
                                         </div>
                                     </div>
-                                    <div className="bg-purple-50 rounded-xl p-4 flex items-center gap-3">
-                                        <div className="p-3 bg-purple-100 rounded-lg">
-                                            <Briefcase className="h-6 w-6 text-purple-600" />
+                                    <div className="bg-purple-50 rounded-xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                                        <div className="p-2 sm:p-3 bg-purple-100 rounded-lg">
+                                            <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-purple-600" />
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600">Luggage</p>
-                                            <p className="text-lg font-bold text-gray-900">{selectedCar?.luggage} Bags</p>
+                                            <p className="text-xs sm:text-sm text-gray-600">Luggage</p>
+                                            <p className="text-base sm:text-lg font-bold text-gray-900">{selectedCar?.luggage} Bags</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Features */}
-                                <div className="border-t border-gray-200 pt-6">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4">Features & Amenities</h3>
-                                    <div className="grid grid-cols-2 gap-3">
+                                <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Features & Amenities</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                                         {['Air Conditioning', 'Automatic', 'GPS Navigation', 'Bluetooth', 'USB Charging', 'Child Seat Available'].map((feature) => (
                                             <div key={feature} className="flex items-center gap-2">
-                                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                                <span className="text-sm text-gray-700">{feature}</span>
+                                                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
+                                                <span className="text-xs sm:text-sm text-gray-700">{feature}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -478,23 +612,65 @@ const CarRentalDetails: React.FC = () => {
                         </div>
 
                         {/* Rental Form */}
-                        <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Rental Details</h2>
+                        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Rental Details</h2>
 
-                            <div className="space-y-5">
-                                {/* Pickup Location with Google Autocomplete */}
+                            <div className="space-y-4 sm:space-y-5">
+                                {/* Rental Type Selection */}
+                                <div className="group">
+                                    <label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-900 mb-2 sm:mb-3">
+                                        <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-600" />
+                                        Do you know your return date?
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setRentalType('fixed')}
+                                            className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl border-2 font-medium text-xs sm:text-sm transition-all duration-200 ${rentalType === 'fixed'
+                                                ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-orange-500 text-orange-700 shadow-sm'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <div className="flex flex-col items-center gap-1">
+                                                <CheckCircle className={`h-4 w-4 sm:h-5 sm:w-5 ${rentalType === 'fixed' ? 'text-orange-600' : 'text-gray-400'}`} />
+                                                <span className="text-xs sm:text-sm">Yes, I know</span>
+                                            </div>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRentalType('flexible')}
+                                            className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl border-2 font-medium text-xs sm:text-sm transition-all duration-200 ${rentalType === 'flexible'
+                                                ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-500 text-green-700 shadow-sm'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <div className="flex flex-col items-center gap-1">
+                                                <FaWhatsapp className={`h-4 w-4 sm:h-5 sm:w-5 ${rentalType === 'flexible' ? 'text-green-600' : 'text-gray-400'}`} />
+                                                <span className="text-[10px] sm:text-sm leading-tight">Not yet - Get Quote</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                    {rentalType === 'flexible' && (
+                                        <div className="mt-2 sm:mt-3 bg-green-50 border border-green-200 rounded-lg p-2 sm:p-3">
+                                            <p className="text-[10px] sm:text-xs text-green-700 font-medium">
+                                                We'll help you get a personalized quote via WhatsApp based on your flexible dates
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Pickup Location */}
                                 <div className="group">
                                     <div className="flex items-center justify-between mb-2">
-                                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                                            <div className="p-1.5 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg border border-orange-200">
-                                                <MapPin className="h-4 w-4 text-orange-600" />
+                                        <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-900">
+                                            <div className="p-1 sm:p-1.5 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg border border-orange-200">
+                                                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
                                             </div>
                                             Pickup Location <span className="text-red-500">*</span>
                                         </label>
                                     </div>
                                     <div className="relative">
                                         <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                             <input
                                                 ref={pickupInputRef}
                                                 type="text"
@@ -502,29 +678,26 @@ const CarRentalDetails: React.FC = () => {
                                                 value={rentalDetails.pickupLocation}
                                                 onChange={(e) => setRentalDetails(prev => ({ ...prev, pickupLocation: e.target.value }))}
                                                 required
-                                                className="relative w-full py-4 pl-12 pr-12 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                                className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
                                             />
-                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
+                                            <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
 
-                                            {/* Current Location Button */}
                                             <button
                                                 type="button"
                                                 onClick={getCurrentLocation}
                                                 disabled={isGettingLocation}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title="Use current location"
                                             >
                                                 {isGettingLocation ? (
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                                                    <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-orange-600"></div>
                                                 ) : (
-                                                    <Locate className="h-4 w-4 text-gray-500 hover:text-orange-500" />
+                                                    <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-orange-500" />
                                                 )}
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Pickup Date & Time */}
                                 <div className="grid md:grid-cols-2 gap-4">
                                     {/* Pickup Date Selection */}
                                     <div className="group relative">
@@ -675,169 +848,218 @@ const CarRentalDetails: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Dropoff Date & Time */}
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    {/* Dropoff Date Selection */}
-                                    <div className="group relative">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                                <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
-                                                    <Calendar className="h-4 w-4 text-purple-600" />
-                                                </div>
-                                                Dropoff Date
-                                            </label>
-                                        </div>
-                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowDropoffDatePicker(!showDropoffDatePicker)}
-                                                className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
-                                            >
-                                                <div className="text-gray-700 font-medium text-sm">
-                                                    {rentalDetails.dropoffDate.getDate()}/{rentalDetails.dropoffDate.getMonth() + 1}/{rentalDetails.dropoffDate.getFullYear().toString().slice(-2)}
-                                                </div>
-                                            </button>
-                                        </div>
+                                {/* Dropoff Date & Time - Only show for fixed rental type */}
+                                {rentalType === 'fixed' && (
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        {/* Dropoff Date Selection */}
+                                        <div className="group relative">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                                    <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
+                                                        <Calendar className="h-4 w-4 text-purple-600" />
+                                                    </div>
+                                                    Dropoff Date
+                                                </label>
+                                            </div>
+                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowDropoffDatePicker(!showDropoffDatePicker)}
+                                                    className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
+                                                >
+                                                    <div className="text-gray-700 font-medium text-sm">
+                                                        {rentalDetails.dropoffDate.getDate()}/{rentalDetails.dropoffDate.getMonth() + 1}/{rentalDetails.dropoffDate.getFullYear().toString().slice(-2)}
+                                                    </div>
+                                                </button>
+                                            </div>
 
-                                        {/* Date Picker Dropdown */}
-                                        {showDropoffDatePicker && (
-                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown min-w-[300px]">
-                                                <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() - 1, 1))}
-                                                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                    >
-                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                        </svg>
-                                                    </button>
+                                            {/* Date Picker Dropdown */}
+                                            {showDropoffDatePicker && (
+                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown min-w-[300px]">
+                                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() - 1, 1))}
+                                                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        >
+                                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                            </svg>
+                                                        </button>
 
-                                                    <div className="text-center">
-                                                        <h3 className="text-lg font-bold text-gray-900">
-                                                            {monthNames[currentDropoffMonth.getMonth()]} {currentDropoffMonth.getFullYear()}
-                                                        </h3>
+                                                        <div className="text-center">
+                                                            <h3 className="text-lg font-bold text-gray-900">
+                                                                {monthNames[currentDropoffMonth.getMonth()]} {currentDropoffMonth.getFullYear()}
+                                                            </h3>
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() + 1, 1))}
+                                                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        >
+                                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-7 gap-2 mb-2">
+                                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                            <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
+                                                                {day}
+                                                            </div>
+                                                        ))}
                                                     </div>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() + 1, 1))}
-                                                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                    >
-                                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                                <div className="grid grid-cols-7 gap-2 mb-2">
-                                                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                        <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
-                                                            {day}
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                    <div className="grid grid-cols-7 gap-2">
+                                                        {dropoffCalendarDays.map((date, index) => {
+                                                            if (!date) {
+                                                                return <div key={`empty-${index}`} className="aspect-square" />;
+                                                            }
 
-                                                <div className="grid grid-cols-7 gap-2">
-                                                    {dropoffCalendarDays.map((date, index) => {
-                                                        if (!date) {
-                                                            return <div key={`empty-${index}`} className="aspect-square" />;
-                                                        }
+                                                            const isToday = date.toDateString() === new Date().toDateString();
+                                                            const isPast = isPastDate(date);
+                                                            const isBefore = isBeforePickup(date);
+                                                            const isSelected = isDateSelected(date, 'dropoff');
 
-                                                        const isToday = date.toDateString() === new Date().toDateString();
-                                                        const isPast = isPastDate(date);
-                                                        const isBefore = isBeforePickup(date);
-                                                        const isSelected = isDateSelected(date, 'dropoff');
-
-                                                        return (
-                                                            <button
-                                                                key={index}
-                                                                type="button"
-                                                                onClick={() => !isPast && !isBefore && handleDropoffDateClick(date)}
-                                                                disabled={isPast || isBefore}
-                                                                className={`
+                                                            return (
+                                                                <button
+                                                                    key={index}
+                                                                    type="button"
+                                                                    onClick={() => !isPast && !isBefore && handleDropoffDateClick(date)}
+                                                                    disabled={isPast || isBefore}
+                                                                    className={`
                                                                     aspect-square rounded-lg text-sm font-medium transition-all duration-200
                                                                     ${isPast || isBefore
-                                                                        ? 'text-gray-300 cursor-not-allowed'
-                                                                        : 'hover:bg-purple-50 cursor-pointer'
-                                                                    }
+                                                                            ? 'text-gray-300 cursor-not-allowed'
+                                                                            : 'hover:bg-purple-50 cursor-pointer'
+                                                                        }
                                                                     ${isSelected
-                                                                        ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
-                                                                        : 'text-gray-700'
-                                                                    }
+                                                                            ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
+                                                                            : 'text-gray-700'
+                                                                        }
                                                                     ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
                                                                 `}
-                                                            >
-                                                                {date.getDate()}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
+                                                                >
+                                                                    {date.getDate()}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
 
-                                                <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const tomorrow = new Date(rentalDetails.pickupDate);
-                                                            tomorrow.setDate(tomorrow.getDate() + 1);
-                                                            handleDropoffDateClick(tomorrow);
-                                                            setCurrentDropoffMonth(tomorrow);
-                                                        }}
-                                                        className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
-                                                    >
-                                                        Next Day
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowDropoffDatePicker(false)}
-                                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
-                                                    >
-                                                        Done
-                                                    </button>
+                                                    <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const tomorrow = new Date(rentalDetails.pickupDate);
+                                                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                                                handleDropoffDateClick(tomorrow);
+                                                                setCurrentDropoffMonth(tomorrow);
+                                                            }}
+                                                            className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                                                        >
+                                                            Next Day
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowDropoffDatePicker(false)}
+                                                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
+                                                        >
+                                                            Done
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Dropoff Time */}
+                                        <div className="group">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                                    <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
+                                                        <Clock className="h-4 w-4 text-blue-600" />
+                                                    </div>
+                                                    Dropoff Time
+                                                </label>
+                                            </div>
+                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                <select
+                                                    value={rentalDetails.dropoffTime}
+                                                    onChange={(e) => setRentalDetails(prev => ({ ...prev, dropoffTime: e.target.value }))}
+                                                    className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 text-sm transition-all duration-200 appearance-none cursor-pointer font-medium"
+                                                >
+                                                    {timeSlots.map((time) => (
+                                                        <option key={time} value={time}>
+                                                            {formatTime12Hour(time)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                    </svg>
                                                 </div>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
+                                )}
 
-                                    {/* Dropoff Time */}
-                                    <div className="group">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                                <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
-                                                    <Clock className="h-4 w-4 text-blue-600" />
-                                                </div>
-                                                Dropoff Time
+                                {/* Number of Days Display - Only show for fixed rental type */}
+                                {rentalType === 'fixed' && (
+                                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-semibold text-gray-700">Rental Duration</span>
+                                            <span className="text-xl font-bold text-blue-600">
+                                                {rentalDetails.numberOfDays} {rentalDetails.numberOfDays === 1 ? 'Day' : 'Days'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Airport Information - Only show if airport trip */}
+                                {isAirportTrip && (
+                                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Plane className="h-5 w-5 text-blue-600" />
+                                            <h4 className="font-bold text-gray-900">Airport Trip Information</h4>
+                                        </div>
+
+                                        {/* Parking Fee Checkbox */}
+                                        <label className="flex items-start gap-3 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={parkingAcknowledged}
+                                                onChange={(e) => setParkingAcknowledged(e.target.checked)}
+                                                className="mt-1 h-5 w-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                                            />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                                                    I acknowledge that parking fees will be collected separately <span className="text-red-500">*</span>
+                                                </p>
+                                                <p className="text-xs text-gray-600 mt-1">
+                                                    Airport parking charges (if applicable) will be paid directly to the driver
+                                                </p>
+                                            </div>
+                                        </label>
+
+                                        {/* Flight Number Input */}
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                                Flight Number <span className="text-red-500">*</span>
                                             </label>
-                                        </div>
-                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                            <select
-                                                value={rentalDetails.dropoffTime}
-                                                onChange={(e) => setRentalDetails(prev => ({ ...prev, dropoffTime: e.target.value }))}
-                                                className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 text-sm transition-all duration-200 appearance-none cursor-pointer font-medium"
-                                            >
-                                                {timeSlots.map((time) => (
-                                                    <option key={time} value={time}>
-                                                        {formatTime12Hour(time)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </div>
+                                            <input
+                                                type="text"
+                                                value={flightNumber}
+                                                onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                                                placeholder="e.g., EK524, FZ123"
+                                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm font-medium uppercase"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-2">
+                                                Required for airport pickup tracking and driver coordination
+                                            </p>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Number of Days Display */}
-                                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-gray-700">Rental Duration</span>
-                                        <span className="text-xl font-bold text-blue-600">
-                                            {rentalDetails.numberOfDays} {rentalDetails.numberOfDays === 1 ? 'Day' : 'Days'}
-                                        </span>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -883,34 +1105,52 @@ const CarRentalDetails: React.FC = () => {
                                             <p className="font-semibold text-gray-900">{rentalDetails.pickupLocation}</p>
                                             <p className="text-gray-600">{formatDate(rentalDetails.pickupDate)} at {formatTime12Hour(rentalDetails.pickupTime)}</p>
                                         </div>
-                                        {rentalDetails.dropoffDate && (
+                                        {rentalType === 'fixed' && rentalDetails.dropoffDate && (
                                             <div>
                                                 <p className="text-gray-500 text-xs mb-1">Dropoff</p>
                                                 <p className="font-semibold text-gray-900">{rentalDetails.pickupLocation}</p>
                                                 <p className="text-gray-600">{formatDate(rentalDetails.dropoffDate)} at {formatTime12Hour(rentalDetails.dropoffTime)}</p>
                                             </div>
                                         )}
+                                        {rentalType === 'flexible' && (
+                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-2">
+                                                <p className="text-xs text-green-700 font-medium">
+                                                    Flexible duration - Final dates to be confirmed
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
-                                {/* Checkout Button */}
-                                <button
-                                    onClick={handleCheckout}
-                                    disabled={!isFormValid() || checkoutLoading}
-                                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                                >
-                                    {checkoutLoading ? (
-                                        <>
-                                            <RefreshCw className="h-5 w-5 animate-spin" />
-                                            <span>Processing...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Lock className="h-5 w-5" />
-                                            <span>Proceed to Checkout</span>
-                                        </>
-                                    )}
-                                </button>
+                                {/* Action Buttons - Conditional based on rental type */}
+                                {rentalType === 'fixed' ? (
+                                    <button
+                                        onClick={handleCheckout}
+                                        disabled={!isFormValid() || checkoutLoading}
+                                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                    >
+                                        {checkoutLoading ? (
+                                            <>
+                                                <RefreshCw className="h-5 w-5 animate-spin" />
+                                                <span>Processing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Lock className="h-5 w-5" />
+                                                <span>Proceed to Checkout</span>
+                                            </>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleWhatsAppQuote}
+                                        disabled={!isFormValid()}
+                                        className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-lg hover:shadow-green-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                    >
+                                        <FaWhatsapp className="h-5 w-5" />
+                                        <span>Get Quote via WhatsApp</span>
+                                    </button>
+                                )}
 
                                 <p className="text-xs text-gray-500 text-center">
                                     By proceeding, you agree to our terms and conditions

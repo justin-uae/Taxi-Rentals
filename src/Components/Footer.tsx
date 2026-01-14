@@ -7,8 +7,8 @@ const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
 
     const quickLinks = [
-        { name: 'About Us', href: '/about' },
         { name: 'Our Fleets', href: '/fleet' },
+        { name: 'About Us', href: '/about' },
         { name: 'Contact Us', href: '/contact' },
     ];
 
@@ -38,7 +38,9 @@ const Footer: React.FC = () => {
                             {/* <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-xl shadow-lg">
                                 <Car className="w-8 h-8 text-white" />
                             </div> */}
-                            <span className="text-2xl font-bold text-white">DubaiCab</span>
+                            <h1 className="text-lg sm:text-xl font-bold text-white">
+                                A2B<span className="text-orange-400"> Transport</span>
+                            </h1>
                         </Link>
 
                         {/* Contact Info */}
@@ -97,7 +99,7 @@ const Footer: React.FC = () => {
                                 <span className="text-sm font-bold text-orange-400">Our Mission</span>
                             </div>
                             <p className="text-xs text-gray-400 leading-relaxed">
-                                Providing reliable, safe, and comfortable taxi services across UAE with exceptional customer experience.
+                                Providing reliable, safe, and comfortable cab services across UAE with exceptional customer experience.
                             </p>
                         </div>
                     </div>
@@ -133,14 +135,14 @@ const Footer: React.FC = () => {
                             rel="noopener noreferrer"
                             className="text-orange-400 hover:text-orange-300 font-bold transition-colors"
                         >
-                            DubaiCab
+                            A2B Transport
                         </a>
 
                         {' '}• All rights reserved
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-3">
                         <Car className="w-4 h-4 text-orange-500" />
-                        <p className="text-xs text-gray-500">Premium Taxi Services • Safe & Reliable</p>
+                        <p className="text-xs text-gray-500">Premium Transport Services • Safe & Reliable</p>
                     </div>
                 </div>
             </div>

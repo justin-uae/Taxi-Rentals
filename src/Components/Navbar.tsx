@@ -19,7 +19,7 @@ const Navbar: React.FC = () => {
 
     const handleWhatsAppClick = () => {
         const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER;
-        const message = 'Hello! I would like to inquire about your Taxi rides.';
+        const message = 'Hello! I would like to inquire about your Cab rides.';
         const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
     };
@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
                             onClick={handleLinkClick}
                         >
                             <h1 className="text-lg sm:text-xl font-bold text-white">
-                                Dubai<span className="text-orange-400">Cab</span>
+                                A2B<span className="text-orange-400"> Transport</span>
                             </h1>
                         </Link>
 
@@ -127,6 +127,16 @@ const Navbar: React.FC = () => {
                                     Home
                                 </Link>
                                 <Link
+                                    to="/fleet"
+                                    onClick={handleLinkClick}
+                                    className={`py-3 px-4 rounded-lg font-medium transition-all ${isActive('/fleet')
+                                        ? 'bg-orange-500/10 text-orange-400 border-l-4 border-orange-500'
+                                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-orange-400'
+                                        }`}
+                                >
+                                    Our Fleets
+                                </Link>
+                                <Link
                                     to="/about"
                                     onClick={handleLinkClick}
                                     className={`py-3 px-4 rounded-lg font-medium transition-all ${isActive('/about')
@@ -136,7 +146,6 @@ const Navbar: React.FC = () => {
                                 >
                                     About Us
                                 </Link>
-
                                 <Link
                                     to="/contact"
                                     onClick={handleLinkClick}

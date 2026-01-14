@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate } from 'lucide-react';
-import Banner5 from '../assets/Banner6.png';
+import Banner5 from '../assets/Banner5.jpg';
 
 declare global {
     interface Window {
@@ -303,7 +303,7 @@ const HomePage: React.FC = () => {
             return;
         }
 
-        navigate('/taxi-options', {
+        navigate('/transport-options', {
             state: {
                 from: pickupLocation,
                 to: dropoffLocation,
@@ -409,6 +409,15 @@ const HomePage: React.FC = () => {
                         {/* Left Column - Booking Form */}
                         <div className="w-full mx-auto order-2 lg:order-1">
                             <div className="bg-white/95 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl shadow-black/10 border border-white/30 max-w-lg lg:mx-0 mx-auto">
+                                {/* Form Title */}
+                                <div className="mb-4 sm:mb-6">
+                                    <h2 className="text-2xl sm:text-3xl font-bold text-orange-600 mb-2">
+                                        Reserve Your Ride Now
+                                    </h2>
+                                    <p className="text-sm sm:text-base text-gray-600">
+                                        Experience luxury travel with professional drivers
+                                    </p>
+                                </div>
                                 <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4">
                                     {/* Trip Type Selection */}
                                     <div className="group">
@@ -1011,7 +1020,7 @@ const HomePage: React.FC = () => {
                                     </div>
 
                                     {/* Stats badges - Centered */}
-                                    <div className="grid grid-cols-3 gap-4 pt-8 max-w-2xl mx-auto">
+                                    {/* <div className="grid grid-cols-3 gap-4 pt-8 max-w-2xl mx-auto">
                                         <div className="bg-white/15 backdrop-blur-md rounded-xl p-4 border border-white/30 text-center transform hover:scale-105 transition-all duration-300">
                                             <div className="text-3xl font-black text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">50K+</div>
                                             <div className="text-sm text-white/95 font-semibold mt-1">Rides</div>
@@ -1024,7 +1033,7 @@ const HomePage: React.FC = () => {
                                             <div className="text-3xl font-black text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">24/7</div>
                                             <div className="text-sm text-white/95 font-semibold mt-1">Support</div>
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         </div>

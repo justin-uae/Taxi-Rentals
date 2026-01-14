@@ -90,7 +90,7 @@ const PopularCars: React.FC = () => {
                                     className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-orange-200"
                                 >
                                     {/* Car Image */}
-                                    <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 h-56">
+                                    <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 h-65">
                                         <img
                                             src={car?.image}
                                             alt={car?.name}
@@ -112,52 +112,60 @@ const PopularCars: React.FC = () => {
                                     </div>
 
                                     {/* Car Details */}
-                                    <div className="p-6">
+                                    <div className="p-4">
                                         {/* Name & Rating */}
-                                        <div className="mb-5">
-                                            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors">
+                                        <div className="mb-3">
+                                            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
                                                 {car?.name}
                                             </h3>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-full">
-                                                    <Star className="h-4 w-4 fill-orange-500 text-orange-500" />
-                                                    <span className="text-sm font-bold text-orange-600">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1 bg-orange-50 px-2.5 py-1 rounded-full">
+                                                    <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
+                                                    <span className="text-xs font-bold text-orange-600">
                                                         {car?.rating}
                                                     </span>
                                                 </div>
-                                                <span className="text-sm text-gray-500 font-medium">
+                                                <span className="text-xs text-gray-500 font-medium">
                                                     {car?.reviews} reviews
                                                 </span>
                                             </div>
                                         </div>
 
                                         {/* Specifications */}
-                                        <div className="space-y-3 mb-5 pb-5 border-b-2 border-gray-100">
+                                        <div className="space-y-2 mb-3 pb-3 border-b border-gray-100">
                                             <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2.5 text-gray-700">
-                                                    <div className="p-2 bg-blue-50 rounded-lg">
-                                                        <Users className="h-4 w-4 text-blue-600" />
+                                                <div className="flex items-center gap-2 text-gray-700">
+                                                    <div className="p-1.5 bg-blue-50 rounded-lg">
+                                                        <Users className="h-3.5 w-3.5 text-blue-600" />
                                                     </div>
-                                                    <span className="text-sm font-semibold">{car?.passengers} Passengers</span>
+                                                    <span className="text-xs font-semibold">{car?.passengers} Passengers</span>
                                                 </div>
-                                                <div className="flex items-center gap-2.5 text-gray-700">
-                                                    <div className="p-2 bg-purple-50 rounded-lg">
-                                                        <Briefcase className="h-4 w-4 text-purple-600" />
+                                                <div className="flex items-center gap-2 text-gray-700">
+                                                    <div className="p-1.5 bg-purple-50 rounded-lg">
+                                                        <Briefcase className="h-3.5 w-3.5 text-purple-600" />
                                                     </div>
-                                                    <span className="text-sm font-semibold">{car?.luggage} Bags</span>
+                                                    <span className="text-xs font-semibold">{car?.luggage} Bags</span>
                                                 </div>
                                             </div>
+
+                                            {/* Driver Included Badge */}
+                                            <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl py-2 px-3">
+                                                <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                                <span className="text-xs font-bold text-orange-700">Professional Driver Included</span>
+                                            </div>
                                         </div>
+
                                         {/* Rent Button */}
                                         <button
                                             onClick={() => handleRentClick(car?.id)}
-                                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] flex items-center justify-center gap-2"
+                                            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] flex items-center justify-center gap-2 text-sm"
                                         >
-                                            <Calendar className="h-5 w-5" />
+                                            <Calendar className="h-4 w-4" />
                                             Rent for a Day
                                         </button>
                                     </div>
-
                                     {/* Hover Glow Effect */}
                                     <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                                         <div className="absolute inset-0 rounded-3xl shadow-2xl shadow-orange-500/20"></div>

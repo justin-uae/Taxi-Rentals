@@ -123,7 +123,7 @@ const Register: React.FC = () => {
                         Create Account
                     </h1>
                     <p className="text-gray-600">
-                        Join DubaiCab and start your journey
+                        Join A2B Transport and start your journey
                     </p>
                 </div>
 

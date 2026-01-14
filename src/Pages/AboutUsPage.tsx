@@ -1,5 +1,6 @@
 import React from 'react';
 import { Award, Users, Car, Clock, Shield, TrendingUp, CheckCircle, Star, Heart, Zap, Target, Globe } from 'lucide-react';
+import Banner from '../assets/Banner6.png';
 
 const AboutUs: React.FC = () => {
     const stats = [
@@ -49,11 +50,11 @@ const AboutUs: React.FC = () => {
     ];
 
     const milestones = [
-        { year: '2009', title: 'Founded', description: 'DubaiCab was established with a vision to revolutionize taxi services in UAE' },
+        { year: '2009', title: 'Founded', description: 'A2B Transport was established with a vision to revolutionize cab services in UAE' },
         { year: '2012', title: 'Fleet Expansion', description: 'Expanded our fleet to 100+ vehicles across Dubai and Abu Dhabi' },
         { year: '2016', title: 'Technology Integration', description: 'Launched our mobile app for seamless booking experience' },
         { year: '2020', title: 'Premium Services', description: 'Introduced luxury and electric vehicle options' },
-        { year: '2024', title: 'Market Leader', description: 'Became one of the most trusted taxi services in UAE' }
+        { year: '2024', title: 'Market Leader', description: 'Became one of the most trusted cab services in UAE' }
     ];
 
     const features = [
@@ -82,13 +83,13 @@ const AboutUs: React.FC = () => {
                 <div className="container mx-auto px-4 relative z-10">
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 animate-fade-in">
-                            About DubaiCab
+                            About A2B Transport
                         </h1>
                         <p className="text-xl md:text-2xl text-orange-100 mb-8 animate-fade-in-delay">
                             Your Trusted Partner in Premium Transportation
                         </p>
                         <p className="text-lg md:text-xl leading-relaxed max-w-3xl mx-auto animate-fade-in-delay-2">
-                            Since 2009, we've been providing safe, reliable, and comfortable taxi services across Dubai and Abu Dhabi. Our commitment to excellence has made us the preferred choice for thousands of passengers.
+                            Since 2009, we've been providing safe, reliable, and comfortable cab services across Dubai and Abu Dhabi. Our commitment to excellence has made us the preferred choice for thousands of passengers.
                         </p>
                     </div>
                 </div>
@@ -122,7 +123,7 @@ const AboutUs: React.FC = () => {
                             </h2>
                             <div className="space-y-4 text-gray-700 leading-relaxed">
                                 <p>
-                                    Founded in 2009, DubaiCab began with a simple mission: to provide the most reliable and comfortable taxi service in the UAE. What started as a small fleet of 10 vehicles has grown into one of the region's most trusted transportation providers.
+                                    Founded in 2009, A2B Transport began with a simple mission: to provide the most reliable and comfortable cab service in the UAE. What started as a small fleet of 10 vehicles has grown into one of the region's most trusted transportation providers.
                                 </p>
                                 <p>
                                     Our journey has been driven by our unwavering commitment to customer satisfaction, safety, and innovation. We've embraced technology while maintaining the personal touch that sets us apart.
@@ -136,7 +137,11 @@ const AboutUs: React.FC = () => {
                         <div className="relative">
                             <div className="aspect-square bg-gradient-to-br from-orange-100 to-orange-200 rounded-3xl overflow-hidden">
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <Car className="h-64 w-64 text-orange-500 opacity-20" />
+                                    <img
+                                        src={Banner}
+                                        alt="Luxury Car Fleet"
+                                        className="w-full h-full object-cover rounded-2xl shadow-2xl"
+                                    />
                                 </div>
                             </div>
                             <div className="absolute -bottom-6 -right-6 bg-white rounded-2xl shadow-xl p-6 max-w-xs">
@@ -172,7 +177,7 @@ const AboutUs: React.FC = () => {
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
                                 <p className="text-gray-300 leading-relaxed">
-                                    To become the most trusted and preferred taxi service across the UAE, recognized for our commitment to excellence, innovation, and customer care.
+                                    To become the most trusted and preferred cab service across the UAE, recognized for our commitment to excellence, innovation, and customer care.
                                 </p>
                             </div>
                         </div>
@@ -291,7 +296,7 @@ const AboutUs: React.FC = () => {
                             Ready to Experience the Difference?
                         </h2>
                         <p className="text-xl text-orange-100 mb-8">
-                            Join thousands of satisfied customers who trust DubaiCab for their transportation needs
+                            Join thousands of satisfied customers who trust A2B Transport for their transportation needs
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <a

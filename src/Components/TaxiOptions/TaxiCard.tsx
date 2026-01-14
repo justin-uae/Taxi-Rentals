@@ -45,7 +45,7 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
             >
                 <div className="p-3">
                     <div className="flex gap-3">
-                        {/* Taxi Image */}
+                        {/* Transport Image */}
                         <div className="w-24 flex-shrink-0">
                             <div className="relative h-20 rounded-lg overflow-hidden">
                                 <img
