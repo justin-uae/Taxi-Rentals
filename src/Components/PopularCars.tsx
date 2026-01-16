@@ -1,13 +1,12 @@
-import React, { useEffect } from 'react';
-import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Calendar } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Info } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 
 const PopularCars: React.FC = () => {
     const dispatch = useAppDispatch();
-    const navigate = useNavigate();
     const { products, loading, error, initialized } = useAppSelector((state) => state.shopify);
+    const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
     // Fetch products on mount
     useEffect(() => {
@@ -16,8 +15,35 @@ const PopularCars: React.FC = () => {
         }
     }, [dispatch, initialized]);
 
-    const handleRentClick = (carId: number) => {
-        navigate(`/car-rental/${carId}`);
+    // Helper function to get category text based on car type
+    const getCategoryText = (type: string) => {
+        const lowerType = type.toLowerCase();
+
+        if (lowerType.includes('standard sedan')) {
+            return 'Or a similar standard sedan';
+        } else if (lowerType.includes('vip luxury sedan')) {
+            return 'Or a similar VIP luxury sedan';
+        } else if (lowerType.includes('luxury sedan')) {
+            return 'Or a similar luxury sedan';
+        } else if (lowerType.includes('executive minivan')) {
+            return 'Or a similar executive minivan';
+        } else if (lowerType.includes('luxury suv')) {
+            return 'Or a similar luxury SUV';
+        } else if (lowerType.includes('luxury limousine')) {
+            return 'Or a similar luxury limousine';
+        } else if (lowerType.includes('budget group transport')) {
+            return 'Or a similar budget transport';
+        } else if (lowerType.includes('executive minibus')) {
+            return 'Or a similar executive minibus';
+        } else if (lowerType.includes('large group transport')) {
+            return 'Or a similar large transport';
+        } else if (lowerType.includes('luxury vip group transport')) {
+            return 'Or a similar VIP luxury transport';
+        } else if (lowerType.includes('luxury group transport')) {
+            return 'Or a similar luxury transport';
+        } else {
+            return 'Or a similar vehicle';
+        }
     };
 
     // Loading state
@@ -87,7 +113,7 @@ const PopularCars: React.FC = () => {
                             {carsToShow?.sort((a, b) => a.passengers - b.passengers).map((car) => (
                                 <div
                                     key={car?.id}
-                                    className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-orange-200"
+                                    className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 hover:border-orange-200 relative"
                                 >
                                     {/* Car Image */}
                                     <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 h-65">
@@ -118,6 +144,28 @@ const PopularCars: React.FC = () => {
                                             <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">
                                                 {car?.name}
                                             </h3>
+                                            <div
+                                                className="mb-3 relative"
+                                                onMouseEnter={() => setHoveredCard(car?.id)}
+                                                onMouseLeave={() => setHoveredCard(null)}
+                                            >
+                                                <div className="flex items-center gap-1.5 text-gray-600 cursor-help">
+                                                    <Info className="h-3.5 w-3.5 text-gray-500 hover:text-orange-600 transition-colors flex-shrink-0" />
+                                                    <span className="text-xs font-medium italic">
+                                                        {getCategoryText(car?.type)}
+                                                    </span>
+                                                </div>
+
+                                                {/* Tooltip */}
+                                                {hoveredCard === car?.id && (
+                                                    <div className="absolute left-0 top-full mt-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-30 animate-fadeIn">
+                                                        <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                                        <p className="leading-relaxed">
+                                                            You may not get the same model, but you will always get a car of the same class, size, number of doors, transmission type, and features.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-2">
                                                 <div className="flex items-center gap-1 bg-orange-50 px-2.5 py-1 rounded-full">
                                                     <Star className="h-3.5 w-3.5 fill-orange-500 text-orange-500" />
@@ -158,13 +206,13 @@ const PopularCars: React.FC = () => {
                                         </div>
 
                                         {/* Rent Button */}
-                                        <button
+                                        {/* <button
                                             onClick={() => handleRentClick(car?.id)}
                                             className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] flex items-center justify-center gap-2 text-sm"
                                         >
                                             <Calendar className="h-4 w-4" />
                                             Rent for a Day
-                                        </button>
+                                        </button> */}
                                     </div>
                                     {/* Hover Glow Effect */}
                                     <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">

@@ -148,6 +148,9 @@ const TaxiOptions: React.FC = () => {
     // Filter and sort taxi options
     const filteredAndSortedTaxiOptions = [...taxiOptionsWithVariants]
         .filter(taxi => {
+            // Exclude Luxury Limousine
+            if (taxi.type === 'Luxury Limousine') return false;
+
             if (activeFilter === 'all') return true;
             if (activeFilter === 'popular') return taxi.popular;
             if (activeFilter === 'economy') return taxi.perKmRate <= 2.5;

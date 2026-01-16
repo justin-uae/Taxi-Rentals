@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Filter, X, Calendar } from 'lucide-react';
+import { Users, Briefcase, Star, Loader, AlertCircle, RefreshCw, Filter, X } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
-import { useNavigate } from 'react-router-dom';
 
 const OurFleet: React.FC = () => {
     const dispatch = useAppDispatch();
@@ -10,7 +9,6 @@ const OurFleet: React.FC = () => {
 
     const [filterType, setFilterType] = useState<string>('all');
     const [sortBy, setSortBy] = useState<string>('passengers-low');
-    const navigate = useNavigate();
 
     // Fetch products on mount
     useEffect(() => {
@@ -44,9 +42,6 @@ const OurFleet: React.FC = () => {
             }
         });
 
-    const handleRentClick = (carId: number) => {
-        navigate(`/car-rental/${carId}`);
-    };
 
     // Loading state
     if (loading && !initialized) {
@@ -248,27 +243,6 @@ const OurFleet: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* Pricing */}
-                                    <div className="mb-3">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-xs text-gray-500">Starting from</span>
-                                            <span className="text-lg font-bold text-orange-600">
-                                                AED {car.baseFare}
-                                            </span>
-                                        </div>
-                                        <p className="text-[10px] text-gray-500 mt-1">
-                                            + AED {car.perKmRate}/km
-                                        </p>
-                                    </div>
-
-                                    {/* Rent Button */}
-                                    <button
-                                        onClick={() => handleRentClick(car?.id)}
-                                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] flex items-center justify-center gap-2 text-sm"
-                                    >
-                                        <Calendar className="h-4 w-4" />
-                                        Rent for a Day
-                                    </button>
                                 </div>
                             </div>
                         ))}

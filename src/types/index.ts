@@ -1,5 +1,5 @@
-// Search Details
 export interface SearchDetails {
+    serviceType?: 'transfers' | 'daily-rental';
     from: string;
     to: string;
     fromCoords?: { lat: number; lng: number };
@@ -8,16 +8,36 @@ export interface SearchDetails {
     duration?: string;
     date: string;
     time: string;
+    passengers: number;
     tripType?: 'one-way' | 'return';
     returnDate?: string;
     returnTime?: string;
-    passengers?: number;
+
+    // Daily Rental specific fields
+    pickupDate?: string;
+    pickupTime?: string;
+    dropoffDate?: string;
+    dropoffTime?: string;
+    rentalType?: string;
+    numberOfDays?: number;
+    rentalHours?: number;
+}
+// Daily Rental Search Details
+export interface DailyRentalSearchDetails {
+    serviceType: 'daily-rental';
+    pickupLocation: string;
+    pickupCoords?: { lat: number; lng: number } | null;
+    date: string;
+    time: string;
+    dropoffDate: string;
+    dropoffTime: string;
+    passengers: number;
 }
 
 // Taxi Variant - KM Range based pricing
 export interface TaxiVariant {
     id: string; // Shopify variant ID (gid://shopify/ProductVariant/xxx)
-    title: string; // e.g., "0-50 km"
+    title: string; // e.g., "0-50 km" or "Daily Rental - Half Day" or "Daily Rental - Full Day"
     price: number; // Price for this range
     kmRangeMin: number; // e.g., 0
     kmRangeMax: number; // e.g., 50

@@ -18,7 +18,7 @@ const GET_PRODUCTS_QUERY = `
           description
           productType
           tags
-          variants(first: 15) {
+          variants(first: 40) {
             edges {
               node {
                 id

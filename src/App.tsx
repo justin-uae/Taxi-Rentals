@@ -14,6 +14,7 @@ import { Provider } from 'react-redux';
 import ScrollToTop from './Components/ScrollToTop';
 import OurFleet from './Pages/OurFleet';
 import CarRentalDetails from './Pages/CarRentalDetails';
+import CarRentalOptions from './Pages/CarRentalOptions';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             {/* <Route path="/register" element={<Register />} /> */}
             <Route path="/fleet" element={<OurFleet />} />
             <Route path="/transport-options" element={<TaxiOptions />} />
+            <Route path="/car-rental-options" element={<CarRentalOptions />} />
             <Route path="/car-rental/:carId" element={<CarRentalDetails />} />
             <Route path="/payment" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
