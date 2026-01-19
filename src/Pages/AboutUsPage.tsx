@@ -4,8 +4,8 @@ import Banner from '../assets/Banner6.png';
 
 const AboutUs: React.FC = () => {
     const stats = [
-        { icon: Users, value: '50K+', label: 'Happy Customers', color: 'from-blue-500 to-blue-600' },
-        { icon: Car, value: '500+', label: 'Fleet Vehicles', color: 'from-orange-500 to-orange-600' },
+        { icon: Users, value: '50K+', label: 'Happy Passengers', color: 'from-blue-500 to-blue-600' },
+        { icon: Car, value: '500+', label: 'Professional Drivers', color: 'from-orange-500 to-orange-600' },
         { icon: Clock, value: '24/7', label: 'Available Service', color: 'from-green-500 to-green-600' },
         { icon: Award, value: '15+', label: 'Years Experience', color: 'from-purple-500 to-purple-600' }
     ];
@@ -14,60 +14,59 @@ const AboutUs: React.FC = () => {
         {
             icon: Shield,
             title: 'Safety First',
-            description: 'Your safety is our top priority. All our drivers are thoroughly vetted and vehicles are regularly inspected.',
+            description: 'Your safety is our top priority. All our drivers are thoroughly vetted, licensed, and our vehicles are regularly inspected.',
             color: 'bg-green-100 text-green-600'
         },
         {
             icon: Heart,
-            title: 'Customer Care',
-            description: 'We treat every passenger like family, ensuring comfort and satisfaction throughout your journey.',
+            title: 'Passenger Care',
+            description: 'We treat every passenger like family, ensuring comfort and satisfaction throughout your journey with our professional drivers.',
             color: 'bg-red-100 text-red-600'
         },
         {
             icon: Zap,
             title: 'Quick Response',
-            description: 'Fast booking, prompt arrival, and efficient service. We value your time as much as you do.',
+            description: 'Fast booking, prompt arrival, and efficient service. We value your time as much as you do with our reliable chauffeur service.',
             color: 'bg-yellow-100 text-yellow-600'
         },
         {
             icon: Target,
             title: 'Excellence',
-            description: 'We strive for excellence in every ride, from professional drivers to premium vehicles.',
+            description: 'We strive for excellence in every ride, from professional chauffeurs to premium vehicles with driver service.',
             color: 'bg-blue-100 text-blue-600'
         },
         {
             icon: Globe,
             title: 'Innovation',
-            description: 'Leveraging cutting-edge technology to provide seamless booking and tracking experiences.',
+            description: 'Leveraging cutting-edge technology to provide seamless booking and real-time tracking for all transfers.',
             color: 'bg-purple-100 text-purple-600'
         },
         {
             icon: Star,
             title: 'Quality Service',
-            description: 'Consistently delivering high-quality service that exceeds expectations every single time.',
+            description: 'Consistently delivering high-quality chauffeur-driven transportation that exceeds expectations every single time.',
             color: 'bg-orange-100 text-orange-600'
         }
     ];
 
     const milestones = [
-        { year: '2009', title: 'Founded', description: 'A2B Transport was established with a vision to revolutionize cab services in UAE' },
-        { year: '2012', title: 'Fleet Expansion', description: 'Expanded our fleet to 100+ vehicles across Dubai and Abu Dhabi' },
-        { year: '2016', title: 'Technology Integration', description: 'Launched our mobile app for seamless booking experience' },
-        { year: '2020', title: 'Premium Services', description: 'Introduced luxury and electric vehicle options' },
-        { year: '2024', title: 'Market Leader', description: 'Became one of the most trusted cab services in UAE' }
+        { year: '2009', title: 'Founded', description: 'A2B Transport was established with a vision to revolutionize chauffeur-driven transport services in UAE' },
+        { year: '2012', title: 'Fleet Expansion', description: 'Expanded our professional driver team to 100+ across Dubai and Abu Dhabi' },
+        { year: '2016', title: 'Technology Integration', description: 'Launched our mobile app for seamless transfer and daily booking experience' },
+        { year: '2020', title: 'Premium Services', description: 'Introduced luxury chauffeur services and electric vehicle options with professional drivers' },
+        { year: '2024', title: 'Market Leader', description: 'Became one of the most trusted chauffeur-driven transport services in UAE' }
     ];
 
     const features = [
-        'Professional & Licensed Drivers',
+        'Professional & Licensed Chauffeurs',
         'Clean & Well-Maintained Vehicles',
         'Transparent Pricing',
-        'GPS Tracking',
         'Multiple Payment Options',
         '24/7 Customer Support',
         'Online Booking System',
-        'Corporate Packages',
+        'Corporate Transfer Packages',
         'Airport Transfers',
-        'Eco-Friendly Options'
+        'Daily Chauffeur Bookings'
     ];
 
     return (
@@ -86,10 +85,10 @@ const AboutUs: React.FC = () => {
                             About A2B Transport
                         </h1>
                         <p className="text-xl md:text-2xl text-orange-100 mb-8 animate-fade-in-delay">
-                            Your Trusted Partner in Premium Transportation
+                            Your Trusted Partner in Premium Chauffeur-Driven Transportation
                         </p>
                         <p className="text-lg md:text-xl leading-relaxed max-w-3xl mx-auto animate-fade-in-delay-2">
-                            Since 2009, we've been providing safe, reliable, and comfortable cab services across Dubai and Abu Dhabi. Our commitment to excellence has made us the preferred choice for thousands of passengers.
+                            Since 2009, we've been providing safe, reliable, and comfortable chauffeur-driven transport services across Dubai and Abu Dhabi. Our commitment to excellence has made us the preferred choice for thousands of passengers seeking professional drivers.
                         </p>
                     </div>
                 </div>
@@ -123,13 +122,13 @@ const AboutUs: React.FC = () => {
                             </h2>
                             <div className="space-y-4 text-gray-700 leading-relaxed">
                                 <p>
-                                    Founded in 2009, A2B Transport began with a simple mission: to provide the most reliable and comfortable cab service in the UAE. What started as a small fleet of 10 vehicles has grown into one of the region's most trusted transportation providers.
+                                    Founded in 2009, A2B Transport began with a simple mission: to provide the most reliable and comfortable chauffeur-driven transport service in the UAE. What started with a small team of 10 professional drivers has grown into one of the region's most trusted transportation providers.
                                 </p>
                                 <p>
-                                    Our journey has been driven by our unwavering commitment to customer satisfaction, safety, and innovation. We've embraced technology while maintaining the personal touch that sets us apart.
+                                    Our journey has been driven by our unwavering commitment to passenger satisfaction, safety, and innovation. We've embraced technology while maintaining the personal touch and professional service that sets us apart.
                                 </p>
                                 <p>
-                                    Today, we're proud to serve over 50,000 satisfied customers annually, operating a fleet of 500+ modern vehicles, and employing hundreds of professional drivers who share our passion for excellence.
+                                    Today, we're proud to serve over 50,000 satisfied passengers annually, operating with 500+ professional chauffeurs who share our passion for excellence in every transfer and daily booking.
                                 </p>
                             </div>
                         </div>
@@ -139,7 +138,7 @@ const AboutUs: React.FC = () => {
                                 <div className="w-full h-full flex items-center justify-center">
                                     <img
                                         src={Banner}
-                                        alt="Luxury Car Fleet"
+                                        alt="Luxury Chauffeur Service"
                                         className="w-full h-full object-cover rounded-2xl shadow-2xl"
                                     />
                                 </div>
@@ -149,7 +148,7 @@ const AboutUs: React.FC = () => {
                                     <TrendingUp className="h-6 w-6 text-green-500" />
                                     <span className="text-2xl font-bold text-gray-900">95%</span>
                                 </div>
-                                <p className="text-sm text-gray-600">Customer Satisfaction Rate</p>
+                                <p className="text-sm text-gray-600">Passenger Satisfaction Rate</p>
                             </div>
                         </div>
                     </div>
@@ -167,7 +166,7 @@ const AboutUs: React.FC = () => {
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
                                 <p className="text-gray-300 leading-relaxed">
-                                    To provide safe, reliable, and comfortable transportation services that exceed customer expectations while embracing innovation and sustainability for a better tomorrow.
+                                    To provide safe, reliable, and comfortable chauffeur-driven transportation services that exceed passenger expectations while embracing innovation and sustainability for a better tomorrow.
                                 </p>
                             </div>
 
@@ -177,7 +176,7 @@ const AboutUs: React.FC = () => {
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
                                 <p className="text-gray-300 leading-relaxed">
-                                    To become the most trusted and preferred cab service across the UAE, recognized for our commitment to excellence, innovation, and customer care.
+                                    To become the most trusted and preferred chauffeur-driven transport service across the UAE, recognized for our commitment to excellence, innovation, and passenger care.
                                 </p>
                             </div>
                         </div>
@@ -268,7 +267,7 @@ const AboutUs: React.FC = () => {
                             What We Offer
                         </h2>
                         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                            Comprehensive services designed for your comfort and convenience
+                            Comprehensive chauffeur-driven services designed for your comfort and convenience
                         </p>
                     </div>
 
@@ -296,7 +295,7 @@ const AboutUs: React.FC = () => {
                             Ready to Experience the Difference?
                         </h2>
                         <p className="text-xl text-orange-100 mb-8">
-                            Join thousands of satisfied customers who trust A2B Transport for their transportation needs
+                            Join thousands of satisfied passengers who trust A2B Transport for their chauffeur-driven transportation needs
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <a
@@ -304,7 +303,7 @@ const AboutUs: React.FC = () => {
                                 className="bg-white text-orange-600 font-bold py-4 px-8 rounded-xl hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
                             >
                                 <Car className="h-5 w-5" />
-                                Book a Ride Now
+                                Book a Transfer Now
                             </a>
                             <a
                                 href="/contact"

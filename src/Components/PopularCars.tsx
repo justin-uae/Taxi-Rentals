@@ -96,7 +96,7 @@ const PopularCars: React.FC = () => {
                 {/* Section Header */}
                 <div className="text-center mb-12 lg:mb-16">
                     <div className="inline-block bg-orange-100 text-orange-600 px-4 py-2 rounded-full text-sm font-semibold mb-4">
-                        Popular Rentals
+                        Popular Services
                     </div>
                     <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                         Our Fleet

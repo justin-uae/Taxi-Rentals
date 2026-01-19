@@ -6,37 +6,37 @@ const Features: React.FC = () => {
         {
             icon: <DollarSign className="h-8 w-8" />,
             title: "Best Price Guaranteed",
-            description: "We offer the most competitive rates in the market with no hidden fees",
+            description: "We offer the most competitive rates for chauffeur-driven services with no hidden fees",
             color: "from-orange-400 to-orange-500"
         },
         {
             icon: <Shield className="h-8 w-8" />,
             title: "Safe & Secure",
-            description: "All our vehicles are fully insured and regularly maintained for your safety",
+            description: "All our drivers are licensed professionals and vehicles are fully insured and regularly maintained",
             color: "from-blue-400 to-blue-500"
         },
         {
             icon: <Clock className="h-8 w-8" />,
             title: "24/7 Support",
-            description: "Round-the-clock customer service to assist you whenever you need help",
+            description: "Round-the-clock customer service to assist you with transfers and daily bookings whenever needed",
             color: "from-green-400 to-green-500"
         },
         {
             icon: <MapPin className="h-8 w-8" />,
-            title: "Multiple Locations",
-            description: "Pick up and drop off at any of our 190+ locations worldwide",
+            title: "Wide Coverage",
+            description: "Professional chauffeur service available across 190+ locations throughout the UAE",
             color: "from-purple-400 to-purple-500"
         },
         {
             icon: <Star className="h-8 w-8" />,
             title: "Premium Quality",
-            description: "Choose from our fleet of well-maintained, premium vehicles",
+            description: "Experienced professional drivers with well-maintained, premium vehicles for your comfort",
             color: "from-red-400 to-red-500"
         },
         {
             icon: <Headphones className="h-8 w-8" />,
             title: "Easy Booking",
-            description: "Simple and quick reservation process with instant confirmation",
+            description: "Simple and quick reservation process for transfers and daily bookings with instant confirmation",
             color: "from-indigo-400 to-indigo-500"
         }
     ];
@@ -50,7 +50,7 @@ const Features: React.FC = () => {
                         Why Choose Us
                     </h2>
                     <p className="text-gray-600 text-base lg:text-lg max-w-2xl mx-auto">
-                        Experience the difference with our premium car rental service. We're committed to making your journey comfortable and hassle-free.
+                        Experience the difference with our premium chauffeur-driven transport service. We're committed to making your journey comfortable and hassle-free.
                     </p>
                 </div>
 

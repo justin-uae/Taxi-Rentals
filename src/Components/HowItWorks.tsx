@@ -52,7 +52,7 @@ const HowItWorks: React.FC = () => {
                         How It Works
                     </h2>
                     <p className="text-gray-300 text-base lg:text-lg max-w-2xl mx-auto">
-                        Get on the road in just 4 easy steps. Our streamlined process makes car rental quick and hassle-free.
+                        Get on the road in just 4 easy steps. Our streamlined process makes booking your chauffeur-driven ride quick and hassle-free.
                     </p>
                 </div>
 

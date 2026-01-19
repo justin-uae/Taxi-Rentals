@@ -19,7 +19,7 @@ const Testimonials: React.FC = () => {
             location: "New York, USA",
             image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
             rating: 5,
-            comment: "Absolutely fantastic service! The car was in perfect condition and the booking process was incredibly smooth. I'll definitely be using this service again for my next trip.",
+            comment: "Absolutely fantastic service! Professional driver, immaculate vehicle, and the booking process was incredibly smooth. I'll definitely be using this chauffeur service again for my next trip.",
             date: "2 weeks ago"
         },
         {
@@ -28,7 +28,7 @@ const Testimonials: React.FC = () => {
             location: "Singapore",
             image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
             rating: 5,
-            comment: "Best car rental experience I've had. The team was professional, the prices were competitive, and the vehicle exceeded my expectations. Highly recommended!",
+            comment: "Best transportation experience I've had. The driver was courteous and professional, the prices were competitive, and the vehicle was pristine. Highly recommended for anyone needing reliable transport!",
             date: "1 month ago"
         },
         {
@@ -37,7 +37,7 @@ const Testimonials: React.FC = () => {
             location: "Barcelona, Spain",
             image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
             rating: 5,
-            comment: "I loved how easy it was to pick up and drop off the car. The customer service was outstanding and they went above and beyond to ensure I had a great experience.",
+            comment: "I loved how punctual and professional the driver was. The customer service was outstanding and they went above and beyond to ensure I had a comfortable journey.",
             date: "3 weeks ago"
         },
         {
@@ -46,7 +46,7 @@ const Testimonials: React.FC = () => {
             location: "Dubai, UAE",
             image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop",
             rating: 5,
-            comment: "Premium quality cars at reasonable prices. The entire process from booking to return was seamless. Their 24/7 support team is also very responsive and helpful.",
+            comment: "Premium chauffeur service at reasonable prices. The entire process from booking to arrival was seamless. Their 24/7 support team is also very responsive and helpful.",
             date: "1 week ago"
         },
         {
@@ -55,7 +55,7 @@ const Testimonials: React.FC = () => {
             location: "London, UK",
             image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=150&h=150&fit=crop",
             rating: 5,
-            comment: "I've rented from many companies, but this one stands out. Clean cars, fair pricing, and excellent customer service. They made my business trip so much easier!",
+            comment: "I've used many transportation services, but this one stands out. Professional drivers, clean vehicles, and excellent customer service. They made my business trip so much easier!",
             date: "2 months ago"
         },
         {
@@ -64,7 +64,7 @@ const Testimonials: React.FC = () => {
             location: "Sydney, Australia",
             image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
             rating: 5,
-            comment: "The flexibility in booking and the variety of cars available is impressive. I got exactly what I needed for my family vacation. Will definitely book again!",
+            comment: "The flexibility in booking transfers and the variety of vehicles with professional drivers is impressive. I got exactly what I needed for my family vacation. Will definitely book again!",
             date: "3 weeks ago"
         }
     ];
@@ -81,7 +81,7 @@ const Testimonials: React.FC = () => {
                         What Our Customers Say
                     </h2>
                     <p className="text-gray-600 text-base lg:text-lg max-w-2xl mx-auto">
-                        Don't just take our word for it. Here's what our satisfied customers have to say about their experience.
+                        Don't just take our word for it. Here's what our satisfied customers have to say about their chauffeur experience.
                     </p>
                 </div>
 
@@ -114,11 +114,11 @@ const Testimonials: React.FC = () => {
 
                             {/* User Info */}
                             <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
-                                <img
+                                {/* <img
                                     src={testimonial.image}
                                     alt={testimonial.name}
                                     className="w-12 h-12 rounded-full object-cover border-2 border-orange-200"
-                                />
+                                /> */}
                                 <div className="flex-1">
                                     <h4 className="font-bold text-gray-900">
                                         {testimonial.name}
@@ -144,7 +144,7 @@ const Testimonials: React.FC = () => {
                             15K+
                         </div>
                         <p className="text-gray-700 font-semibold">
-                            Happy Customers
+                            Happy Passengers
                         </p>
                     </div>
                     <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl">
@@ -152,7 +152,7 @@ const Testimonials: React.FC = () => {
                             190+
                         </div>
                         <p className="text-gray-700 font-semibold">
-                            Locations
+                            Service Areas
                         </p>
                     </div>
                     <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl">
@@ -160,7 +160,7 @@ const Testimonials: React.FC = () => {
                             500+
                         </div>
                         <p className="text-gray-700 font-semibold">
-                            Vehicles
+                            Professional Drivers
                         </p>
                     </div>
                     <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl">
