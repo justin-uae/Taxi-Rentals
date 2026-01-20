@@ -71,7 +71,10 @@ const Footer: React.FC = () => {
                                     <Phone className="w-4 h-4 text-white flex-shrink-0" />
                                 </div>
                                 <a href={`tel:+${phoneNumber}`} className="text-sm hover:text-orange-400 transition-colors font-medium">
-                                    {phoneNumber}, {phoneNumber2}
+                                    {phoneNumber},
+                                </a>
+                                <a href={`tel:+${phoneNumber2}`} className="text-sm hover:text-orange-400 transition-colors font-medium">
+                                    {phoneNumber2}
                                 </a>
                             </div>
                             <div className="flex items-center gap-2 group">

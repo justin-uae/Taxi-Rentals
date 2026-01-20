@@ -15,6 +15,7 @@ const Contact: React.FC = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER;
+    const phoneNumber2 = import.meta.env.VITE_CONTACT_NUMBER_SECOND;
     const companyEmail = import.meta.env.VITE_COMPANY_EMAIL;
     const appURL = import.meta.env.VITE_APP_URL;
     const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
@@ -342,8 +343,12 @@ const Contact: React.FC = () => {
                                     </div>
                                     <div className="min-w-0">
                                         <h3 className="font-black text-base text-gray-900 mb-1">Phone</h3>
+                                        <a href={`tel:${phoneNumber2}`} className="text-sm text-orange-700 hover:text-orange-800 transition-colors break-all font-bold">
+                                            +{phoneNumber2}
+                                        </a>
+                                        <br />
                                         <a href={`tel:${phoneNumber}`} className="text-sm text-orange-700 hover:text-orange-800 transition-colors break-all font-bold">
-                                            {phoneNumber}
+                                            {phoneNumber},
                                         </a>
                                     </div>
                                 </div>
@@ -366,8 +371,13 @@ const Contact: React.FC = () => {
                                     </div>
                                     <div className="min-w-0">
                                         <h3 className="font-black text-base text-gray-900 mb-1">Address</h3>
-                                        <p className="text-sm text-gray-700 font-medium">Khalidiyah Tower, Corniche Road</p>
-                                        <p className="text-sm text-gray-700 font-medium">Abu Dhabi, UAE</p>
+                                        <span className="text-sm text-center md:text-left font-medium">
+                                            Dubai : Hor Al Anz - Building 101, Dubai, UAE
+                                        </span>
+                                        <br />
+                                        <span className="text-sm text-center md:text-left font-medium">
+                                            Abu Dhabi : Khalidiyah Towers, Corniche Road, UAE
+                                        </span>
                                     </div>
                                 </div>
 

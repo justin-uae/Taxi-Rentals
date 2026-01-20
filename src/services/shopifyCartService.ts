@@ -118,7 +118,7 @@ export const createCart = async (cartItem: CartItem, email?: string): Promise<st
 
     // Build cart attributes based on booking type
     const cartAttributes: Array<{ key: string; value: string }> = [
-        { key: 'booking_type', value: isDailyRental ? 'daily_rental' : 'taxi_booking' },
+        { key: 'booking_type', value: isDailyRental ? 'daily_rental' : 'transport_booking' },
         { key: 'vehicle_name', value: cartItem.taxi.name },
     ];
 
