@@ -50,7 +50,7 @@ const AboutUs: React.FC = () => {
     ];
 
     const milestones = [
-        { year: '2009', title: 'Founded', description: 'A2B Transport was established with a vision to revolutionize chauffeur-driven transport services in UAE' },
+        { year: '2009', title: 'Founded', description: 'UAE Transfers was established with a vision to revolutionize chauffeur-driven transport services in UAE' },
         { year: '2012', title: 'Fleet Expansion', description: 'Expanded our professional driver team to 100+ across Dubai and Abu Dhabi' },
         { year: '2016', title: 'Technology Integration', description: 'Launched our mobile app for seamless transfer and daily booking experience' },
         { year: '2020', title: 'Premium Services', description: 'Introduced luxury chauffeur services and electric vehicle options with professional drivers' },
@@ -82,7 +82,7 @@ const AboutUs: React.FC = () => {
                 <div className="container mx-auto px-4 relative z-10">
                     <div className="max-w-4xl mx-auto text-center">
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 animate-fade-in">
-                            About A2B Transport
+                            About UAE Transfers
                         </h1>
                         <p className="text-xl md:text-2xl text-orange-100 mb-8 animate-fade-in-delay">
                             Your Trusted Partner in Premium Chauffeur-Driven Transportation
@@ -122,7 +122,7 @@ const AboutUs: React.FC = () => {
                             </h2>
                             <div className="space-y-4 text-gray-700 leading-relaxed">
                                 <p>
-                                    Founded in 2009, A2B Transport began with a simple mission: to provide the most reliable and comfortable chauffeur-driven transport service in the UAE. What started with a small team of 10 professional drivers has grown into one of the region's most trusted transportation providers.
+                                    Founded in 2009, UAE Transfers began with a simple mission: to provide the most reliable and comfortable chauffeur-driven transport service in the UAE. What started with a small team of 10 professional drivers has grown into one of the region's most trusted transportation providers.
                                 </p>
                                 <p>
                                     Our journey has been driven by our unwavering commitment to passenger satisfaction, safety, and innovation. We've embraced technology while maintaining the personal touch and professional service that sets us apart.
@@ -295,7 +295,7 @@ const AboutUs: React.FC = () => {
                             Ready to Experience the Difference?
                         </h2>
                         <p className="text-xl text-orange-100 mb-8">
-                            Join thousands of satisfied passengers who trust A2B Transport for their chauffeur-driven transportation needs
+                            Join thousands of satisfied passengers who trust UAE Transfers for their chauffeur-driven transportation needs
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <a

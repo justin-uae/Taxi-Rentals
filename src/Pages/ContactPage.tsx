@@ -343,7 +343,7 @@ const Contact: React.FC = () => {
                                     <div className="min-w-0">
                                         <h3 className="font-black text-base text-gray-900 mb-1">Phone</h3>
                                         <a href={`tel:${phoneNumber}`} className="text-sm text-orange-700 hover:text-orange-800 transition-colors break-all font-bold">
-                                            +{phoneNumber}
+                                            {phoneNumber}
                                         </a>
                                     </div>
                                 </div>

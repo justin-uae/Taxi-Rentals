@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, Phone, MapPin, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PaymentMethods from '../assets/payment.png'
+import Logo from '../assets/Logo3.png'
 
 const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
@@ -13,6 +14,7 @@ const Footer: React.FC = () => {
     ];
 
     const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER;
+    const phoneNumber2 = import.meta.env.VITE_CONTACT_NUMBER_SECOND;
     const companyEmail = import.meta.env.VITE_COMPANY_EMAIL;
     const appURL = import.meta.env.VITE_APP_URL;
 
@@ -35,11 +37,14 @@ const Footer: React.FC = () => {
                     <div className="flex flex-col items-center md:items-start gap-4 w-full md:w-auto">
                         {/* Logo/Brand */}
                         <Link to="/" className="flex items-center gap-3 group">
-                            {/* <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-xl shadow-lg">
-                                <Car className="w-8 h-8 text-white" />
-                            </div> */}
+                            <img
+                                src={Logo}
+                                loading='lazy'
+                                alt="UAE Transfers Logo"
+                                className="h-16 sm:h-16 md:h-16 w-auto transition-transform duration-300 group-hover:scale-105"
+                            />
                             <h1 className="text-lg sm:text-xl font-bold text-white">
-                                A2B<span className="text-orange-400"> Transport</span>
+                                UAE<span className="text-orange-400"> Transfers</span>
                             </h1>
                         </Link>
 
@@ -50,7 +55,15 @@ const Footer: React.FC = () => {
                                     <MapPin className="w-4 h-4 text-white flex-shrink-0" />
                                 </div>
                                 <span className="text-sm text-center md:text-left font-medium">
-                                    Khalidiyah Tower, Corniche Road, Abu Dhabi, UAE
+                                    Dubai : Hor Al Anz - Building 101, Dubai, UAE
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 group">
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">
+                                    <MapPin className="w-4 h-4 text-white flex-shrink-0" />
+                                </div>
+                                <span className="text-sm text-center md:text-left font-medium">
+                                    Abu Dhabi : Khalidiyah Towers, Corniche Road, Abu Dhabi, UAE
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 group">
@@ -58,7 +71,7 @@ const Footer: React.FC = () => {
                                     <Phone className="w-4 h-4 text-white flex-shrink-0" />
                                 </div>
                                 <a href={`tel:+${phoneNumber}`} className="text-sm hover:text-orange-400 transition-colors font-medium">
-                                    +{phoneNumber}
+                                    {phoneNumber}, {phoneNumber2}
                                 </a>
                             </div>
                             <div className="flex items-center gap-2 group">
@@ -99,7 +112,7 @@ const Footer: React.FC = () => {
                                 <span className="text-sm font-bold text-orange-400">Our Mission</span>
                             </div>
                             <p className="text-xs text-gray-400 leading-relaxed">
-                                Providing reliable, safe, and comfortable cab services across UAE with exceptional customer experience.
+                                Providing reliable, safe, and comfortable chauffer services across UAE with exceptional customer experience.
                             </p>
                         </div>
                     </div>
@@ -135,7 +148,7 @@ const Footer: React.FC = () => {
                             rel="noopener noreferrer"
                             className="text-orange-400 hover:text-orange-300 font-bold transition-colors"
                         >
-                            A2B Transport
+                            UAE Transfers
                         </a>
 
                         {' '}• All rights reserved

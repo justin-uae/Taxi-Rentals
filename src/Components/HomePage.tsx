@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car } from 'lucide-react';
+import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car, History } from 'lucide-react';
 import Banner5 from '../assets/Banner7.png';
 
 declare global {
@@ -60,7 +60,7 @@ const HomePage: React.FC = () => {
 
     // Daily Rental specific States
     const [dropoffDate, setDropoffDate] = useState<Date>(new Date());
-    const [dropoffTime, setDropoffTime] = useState('18:00');
+    const [dropoffTime, setDropoffTime] = useState('20:00');
     const [showDropoffDatePicker, setShowDropoffDatePicker] = useState(false);
     const [currentDropoffMonth, setCurrentDropoffMonth] = useState(new Date());
 
@@ -513,7 +513,7 @@ const HomePage: React.FC = () => {
                                                 : 'bg-white border-gray-200 text-gray-600 hover:border-orange-300'
                                                 }`}
                                         >
-                                            <Navigation className="h-4 w-4" />
+                                            <Car className="h-4 w-4" />
                                             Transfers
                                         </button>
                                         <button
@@ -524,7 +524,7 @@ const HomePage: React.FC = () => {
                                                 : 'bg-white border-gray-200 text-gray-600 hover:border-orange-300'
                                                 }`}
                                         >
-                                            <Car className="h-4 w-4" />
+                                            <History className="h-4 w-4" />
                                             Daily Bookings
                                         </button>
                                     </div>
@@ -1321,7 +1321,6 @@ const HomePage: React.FC = () => {
                                     </div>
 
                                     <p className="text-xl xl:text-2xl text-white text-center leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] font-semibold px-4">
-                                        Experience premium transportation with our luxury fleet.
                                         <span className="block mt-2 text-white/95">Book your perfect ride in just a few clicks.</span>
                                     </p>
 

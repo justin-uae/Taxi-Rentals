@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
+import Logo from '../assets/Logo3.png';
 
 const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,7 +19,7 @@ const Navbar: React.FC = () => {
     };
 
     const handleWhatsAppClick = () => {
-        const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER;
+        const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER_SECOND;
         const message = 'Hello! I would like to inquire about your Cab rides.';
         const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
@@ -30,15 +31,25 @@ const Navbar: React.FC = () => {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
-                        <Link
+                        <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group">
+                            <img
+                                src={Logo}
+                                alt="UAE Transfers Logo"
+                                className="h-20 sm:h-20 md:h-20 w-auto transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <h1 className="text-lg sm:text-xl font-bold text-white">
+                                UAE<span className="text-orange-400"> Transfers</span>
+                            </h1>
+                        </Link>
+                        {/* <Link
                             to="/"
                             className="flex items-center space-x-2 group"
                             onClick={handleLinkClick}
                         >
                             <h1 className="text-lg sm:text-xl font-bold text-white">
-                                A2B<span className="text-orange-400"> Transport</span>
+                                UAE<span className="text-orange-400"> Transfers</span>
                             </h1>
-                        </Link>
+                        </Link> */}
 
                         {/* Desktop Navigation */}
                         <div className="hidden md:flex items-center gap-6 lg:gap-8">

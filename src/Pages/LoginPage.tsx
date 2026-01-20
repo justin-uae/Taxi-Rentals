@@ -78,7 +78,7 @@ const Login: React.FC = () => {
                         Welcome Back
                     </h1>
                     <p className="text-gray-600">
-                        Sign in to your A2B Transport account
+                        Sign in to your UAE Transfers account
                     </p>
                 </div>
 
