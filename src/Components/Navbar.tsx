@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
-import Logo from '../assets/Logo5.png';
+import Logo from '../assets/Logo.png';
 
 const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,7 +35,7 @@ const Navbar: React.FC = () => {
                             <img
                                 src={Logo}
                                 alt="UAE Transfers Logo"
-                                className="h-20 sm:h-20 md:h-20 w-auto transition-transform duration-300 group-hover:scale-105"
+                                className="h-10 sm:h-14 md:h-14 w-auto transition-transform duration-300 group-hover:scale-105"
                             />
                             <h1 className="text-lg sm:text-xl font-bold text-white">
                                 UAE<span className="text-orange-400"> Transfers</span>
