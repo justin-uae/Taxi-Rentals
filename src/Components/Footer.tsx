@@ -2,7 +2,7 @@ import React from 'react';
 import { Mail, Phone, MapPin, Car } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PaymentMethods from '../assets/payment.png'
-import Logo from '../assets/Logo3.png'
+import Logo from '../assets/Logo5.png'
 
 const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();

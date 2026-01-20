@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { FaWhatsapp } from 'react-icons/fa';
-import Logo from '../assets/Logo3.png';
+import Logo from '../assets/Logo5.png';
 
 const Navbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
