@@ -26,6 +26,7 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
     onBookNow
 }) => {
     const totalPrice = calculatePrice(taxi, distance, tripType);
+    const originalPrice = Math.round(totalPrice * 1.2); // Add 20% for strikethrough price
     const isMobile = window.innerWidth < 1024;
 
     const handleCardClick = () => {
@@ -87,7 +88,14 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                     <div className="text-xs text-gray-500">
                                         {tripType === 'return' ? 'Round Trip' : 'Total Fare'}
                                     </div>
-                                    <div className="font-bold text-gray-900">AED {totalPrice}</div>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-[10px] text-red-500 line-through">
+                                            AED {originalPrice}
+                                        </span>
+                                        <span className="font-bold text-red-600 text-sm">
+                                            AED {totalPrice}
+                                        </span>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={handleBookClick}
@@ -127,7 +135,7 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                             </div>
                             {taxi.popular && (
                                 <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold">
-                                   Popular
+                                    Popular
                                 </div>
                             )}
                             {tripType === 'return' && (
@@ -189,8 +197,11 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                     <div className="text-sm text-gray-500 mb-1">
                                         {tripType === 'return' ? 'Round Trip Fare' : 'One-Way Fare'}
                                     </div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold text-gray-900">
+                                    <div className="flex items-baseline gap-3">
+                                        <span className="text-lg text-red-500 line-through">
+                                            AED {originalPrice}
+                                        </span>
+                                        <span className="text-2xl font-bold text-red-600">
                                             AED {totalPrice}
                                         </span>
                                     </div>

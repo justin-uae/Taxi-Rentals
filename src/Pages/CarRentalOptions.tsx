@@ -42,7 +42,7 @@ const CarRentalOptions: React.FC = () => {
         passengers: 1
     });
 
-    const [selectedCar, setSelectedCar] = useState<number | null>(null); 
+    const [selectedCar, setSelectedCar] = useState<number | null>(null);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'price' | 'rating' | 'passengers'>('price');
 
@@ -563,6 +563,9 @@ const CarRentalOptions: React.FC = () => {
                                                 : rentalDetails.rentalHours < 24 ? 'Full Day Rate'
                                                     : `Total for ${car.quantity} Day${car.quantity > 1 ? 's' : ''}`}
                                         </p>
+                                        <span className="text-[14px] text-red-500 line-through">
+                                            AED {Math.round(car.displayPrice * 1.2)}
+                                        </span>
                                         <p className="text-2xl font-bold text-gray-900">
                                             AED {Math.round(car.displayPrice)}
                                         </p>
