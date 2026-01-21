@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, RefreshCw, AlertCircle, Lock, Users, Briefcase, Star, Clock } from 'lucide-react';
+import { Calendar, MapPin, RefreshCw, AlertCircle, Lock, Users, Briefcase, Star, Clock, Info } from 'lucide-react';
 import { useMobile } from '../hooks/useMobile';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 import { createCheckout } from '../store/slices/cartSlice';
 import type { SearchDetails } from '../types';
+import { formatDateDisplay, getCategoryText } from '../utils/common';
 
 interface RentalDetails {
     serviceType: 'daily-rental';
@@ -45,6 +46,7 @@ const CarRentalOptions: React.FC = () => {
     const [selectedCar, setSelectedCar] = useState<number | null>(null);
     const [activeFilter, setActiveFilter] = useState<string>('all');
     const [sortBy, setSortBy] = useState<'price' | 'rating' | 'passengers'>('price');
+    const [tooltipCarId, setTooltipCarId] = useState<number | null>(null);
 
     // Helper function to convert 12-hour time to 24-hour format
     const convertTo24Hour = (time12h: string): string => {
@@ -405,11 +407,11 @@ const CarRentalOptions: React.FC = () => {
                         </p>
                         <div className="flex items-center gap-2">
                             <span className="text-sm bg-blue-50 px-3 py-1 rounded-full font-medium">
-                                {rentalDetails.date} • {rentalDetails.time}
+                                {formatDateDisplay(rentalDetails.date)} • {rentalDetails.time}
                             </span>
                             <span className="text-sm text-gray-400">→</span>
                             <span className="text-sm bg-green-50 px-3 py-1 rounded-full font-medium">
-                                {rentalDetails.dropoffDate} • {rentalDetails.dropoffTime}
+                                {formatDateDisplay(rentalDetails.dropoffDate)} • {rentalDetails.dropoffTime}
                             </span>
                         </div>
                     </div>
@@ -501,7 +503,51 @@ const CarRentalOptions: React.FC = () => {
 
                             {/* Car Details */}
                             <div className="p-4">
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">{car.name}</h3>
+                                <div className="flex items-start justify-between mb-2">
+                                    <h3 className="text-lg font-bold text-gray-900">{car.name}</h3>
+                                    {/* Category Tooltip */}
+                                    {!isMobile && (
+                                        <div className="relative">
+                                            <div
+                                                className="flex items-center gap-1 text-gray-500 cursor-help"
+                                                onMouseEnter={() => setTooltipCarId(car.id)}
+                                                onMouseLeave={() => setTooltipCarId(null)}
+                                            >
+                                                <Info className="h-4 w-4" />
+                                                <span className="text-xs font-medium">{getCategoryText(car.type)}</span>
+                                            </div>
+                                            {tooltipCarId === car.id && (
+                                                <div className="absolute right-0 top-full mt-2 w-72 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-30 animate-fadeIn">
+                                                    <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                                    <p className="leading-relaxed">
+                                                        You may not get the exact same model, but you will always get a car of the same class, size, passenger capacity, luggage space, and features.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Mobile Category Tooltip */}
+                                {isMobile && (
+                                    <div className="relative mb-2">
+                                        <div
+                                            className="flex items-center gap-1 text-gray-500"
+                                            onClick={() => setTooltipCarId(tooltipCarId === car.id ? null : car.id)}
+                                        >
+                                            <Info className="h-3 w-3" />
+                                            <span className="text-[10px] font-medium">{getCategoryText(car.type)}</span>
+                                        </div>
+                                        {tooltipCarId === car.id && (
+                                            <div className="absolute left-0 top-full mt-1 w-56 bg-gray-900 text-white text-[10px] rounded-lg p-2 shadow-xl z-30 animate-fadeIn">
+                                                <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                                <p className="leading-relaxed">
+                                                    You may not get the exact same model, but you will always get a car of the same class, size, passenger capacity, luggage space, and features.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Rating */}
                                 <div className="flex items-center gap-2 mb-3">
@@ -694,7 +740,7 @@ const CarRentalOptions: React.FC = () => {
                                 </div>
                                 {rentalDetails.rentalHours >= 24 && (
                                     <div className="flex items-center justify-between">
-                                        <span className="text-gray-600">Days (Quantity)</span>
+                                        <span className="text-gray-600">Days</span>
                                         <span className="font-semibold text-gray-900">{selectedCarData.quantity || 1} day{(selectedCarData.quantity || 1) > 1 ? 's' : ''}</span>
                                     </div>
                                 )}
@@ -709,7 +755,7 @@ const CarRentalOptions: React.FC = () => {
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-xs font-semibold text-gray-500 uppercase">Pickup</p>
-                                    <p className="font-semibold text-gray-900">{rentalDetails.date}</p>
+                                    <p className="font-semibold text-gray-900">{formatDateDisplay(rentalDetails.date)}</p>
                                     <p className="text-sm text-gray-600">{rentalDetails.time}</p>
                                 </div>
                             </div>
@@ -720,7 +766,7 @@ const CarRentalOptions: React.FC = () => {
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-xs font-semibold text-gray-500 uppercase">Dropoff</p>
-                                    <p className="font-semibold text-gray-900">{rentalDetails.dropoffDate}</p>
+                                    <p className="font-semibold text-gray-900">{formatDateDisplay(rentalDetails.dropoffDate)}</p>
                                     <p className="text-sm text-gray-600">{rentalDetails.dropoffTime}</p>
                                 </div>
                             </div>
@@ -810,12 +856,27 @@ const CarRentalOptions: React.FC = () => {
                     }
                 }
 
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-5px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
                 .animate-slideUp {
                     animation: slideUp 0.3s ease-out;
                 }
 
                 .animate-slideIn {
                     animation: slideIn 0.3s ease-out;
+                }
+
+                .animate-fadeIn {
+                    animation: fadeIn 0.2s ease-out;
                 }
             `}</style>
         </div>

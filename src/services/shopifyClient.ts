@@ -264,7 +264,16 @@ export async function fetchTaxiProducts(): Promise<TaxiOption[]> {
     }
 
     const products = result.data?.products?.edges || [];
-    return products.map((edge: any) => transformProduct(edge.node));
+
+    // Filter out products with productType = "Parking Fee"
+    const filteredProducts = products.filter((edge: any) => {
+      const productType = edge.node?.productType || '';
+
+      // Exclude parking fee products
+      return productType !== 'Parking Fee';
+    });
+
+    return filteredProducts.map((edge: any) => transformProduct(edge.node));
   } catch (error) {
     console.error('Error fetching products:', error);
     throw error;

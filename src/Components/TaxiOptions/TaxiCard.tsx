@@ -1,6 +1,7 @@
-import React from 'react';
-import { Users, Briefcase, Star, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Briefcase, Star, Check, Info } from 'lucide-react';
 import type { TaxiCardProps } from '../../types';
+import { getCategoryText } from '../../utils/common';
 
 const calculatePrice = (taxi: any, distance: number, tripType?: 'one-way' | 'return') => {
     let basePrice = 0;
@@ -28,6 +29,7 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
     const totalPrice = calculatePrice(taxi, distance, tripType);
     const originalPrice = Math.round(totalPrice * 1.2); // Add 20% for strikethrough price
     const isMobile = window.innerWidth < 1024;
+    const [showTooltip, setShowTooltip] = useState(false);
 
     const handleCardClick = () => {
         onSelect(taxi.id);
@@ -80,6 +82,25 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                 <span>•</span>
                                 <Briefcase className="h-3 w-3" />
                                 <span>{taxi.luggage} bags</span>
+                            </div>
+
+                            {/* Info tooltip for mobile */}
+                            <div className="relative mb-2">
+                                <div
+                                    className="flex items-center gap-1 text-gray-500"
+                                    onClick={() => setShowTooltip(!showTooltip)}
+                                >
+                                    <Info className="h-3 w-3" />
+                                    <span className="text-[10px] font-medium">{getCategoryText(taxi.type)}</span>
+                                </div>
+                                {showTooltip && (
+                                    <div className="absolute left-0 top-full mt-1 w-56 bg-gray-900 text-white text-[10px] rounded-lg p-2 shadow-xl z-30 animate-fadeIn">
+                                        <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                        <p className="leading-relaxed">
+                                            You may not get the same model, but you will always get a car of the same class, size, number of doors, transmission type, and features.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Price */}
@@ -174,6 +195,24 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                         <Briefcase className="h-4 w-4" />
                                         <span className="text-sm">{taxi.luggage} bags</span>
                                     </div>
+                                    <div className="relative">
+                                        <div
+                                            className="flex items-center gap-1 text-gray-500 cursor-help"
+                                            onMouseEnter={() => setShowTooltip(true)}
+                                            onMouseLeave={() => setShowTooltip(false)}
+                                        >
+                                            <Info className="h-4 w-4" />
+                                            <span className="text-xs font-medium">{getCategoryText(taxi.type)}</span>
+                                        </div>
+                                        {showTooltip && (
+                                            <div className="absolute left-0 top-full mt-2 w-72 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-30 animate-fadeIn">
+                                                <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                                                <p className="leading-relaxed">
+                                                    You may not get the same model, but you will always get a car of the same class, size, number of doors, transmission type, and features.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Features */}
@@ -198,7 +237,7 @@ const TaxiCard: React.FC<TaxiCardProps> = ({
                                         {tripType === 'return' ? 'Round Trip Fare' : 'One-Way Fare'}
                                     </div>
                                     <div className="flex items-baseline gap-3">
-                                        <span className="text-lg text-red-500 line-through">
+                                        <span className="text-lg text-red-400 line-through">
                                             AED {originalPrice}
                                         </span>
                                         <span className="text-2xl font-bold text-red-600">

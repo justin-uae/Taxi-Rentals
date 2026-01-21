@@ -11,6 +11,38 @@ interface ShopifyCartLineInput {
 }
 
 /**
+ * Get exact parking fee variant ID for each specific vehicle type
+ * Returns null if no matching parking fee is found
+ */
+const getParkingFeeVariantId = (vehicleType: string): string | null => {
+    // Normalize the vehicle type (trim and lowercase for comparison)
+    const normalizedType = vehicleType.trim().toLowerCase();
+
+    const parkingFeeMap: { [key: string]: string } = {
+        'standard sedan': import.meta.env.VITE_PARKING_FEE_STANDARD_SEDAN,
+        'budget group transport': import.meta.env.VITE_PARKING_FEE_BUDGET_GROUP_TRANSPORT,
+        'luxury limousine': import.meta.env.VITE_PARKING_FEE_LUXURY_LIMOUSINE,
+        'luxury group transport': import.meta.env.VITE_PARKING_FEE_LUXURY_GROUP_TRANSPORT,
+        'luxury vip group transport': import.meta.env.VITE_PARKING_FEE_LUXURY_VIP_GROUP_TRANSPORT,
+        'executive minibus': import.meta.env.VITE_PARKING_FEE_EXECUTIVE_MINIBUS,
+        'executive minivan': import.meta.env.VITE_PARKING_FEE_EXECUTIVE_MINIVAN,
+        'luxury sedan': import.meta.env.VITE_PARKING_FEE_LUXURY_SEDAN,
+        'luxury suv': import.meta.env.VITE_PARKING_FEE_LUXURY_SUV,
+        'large group transport': import.meta.env.VITE_PARKING_FEE_LARGE_GROUP_TRANSPORT,
+        'vip luxury sedan': import.meta.env.VITE_PARKING_FEE_VIP_LUXURY_SEDAN,
+    };
+
+    const variantId = parkingFeeMap[normalizedType];
+
+    if (!variantId) {
+        console.warn(`No parking fee configured for vehicle type: "${vehicleType}"`);
+        return null;
+    }
+
+    return variantId;
+};
+
+/**
  * Convert cart item to Shopify line input
  * 
  * PRICING STRATEGY:
@@ -41,7 +73,6 @@ export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput =>
     ];
 
     if (isDailyRental) {
-        // Daily rental specific attributes
         attributes.push(
             { key: 'rental_type', value: cartItem.search.rentalType || 'Daily Rental' },
             { key: 'pickup_location', value: cartItem.search.from },
@@ -78,16 +109,21 @@ export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput =>
     }
 
     return {
-        merchandiseId: cartItem.taxi.shopifyId || '', // Variant ID
-        quantity: quantity, // This will be 1 for one-way, 2 for return, or N for daily rentals
+        merchandiseId: cartItem.taxi.shopifyId || '',
+        quantity: quantity,
         attributes: attributes,
     };
 };
 
 /**
- * SIMPLE GUEST CHECKOUT - Creates cart and returns checkout URL
+ * Creates cart with automatic parking fee based on exact vehicle type
+ * @param cartItem - The booking item
+ * @param email - Customer email (optional)
  */
-export const createCart = async (cartItem: CartItem, email?: string): Promise<string> => {
+export const createCart = async (
+    cartItem: CartItem,
+    email?: string
+): Promise<string> => {
     const mutation = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -97,6 +133,10 @@ export const createCart = async (cartItem: CartItem, email?: string): Promise<st
           totalQuantity
           cost {
             totalAmount {
+              amount
+              currencyCode
+            }
+            subtotalAmount {
               amount
               currencyCode
             }
@@ -113,13 +153,36 @@ export const createCart = async (cartItem: CartItem, email?: string): Promise<st
 
     const lineItem = cartItemToLineInput(cartItem);
 
+    // Start with main booking line item
+    const lines: ShopifyCartLineInput[] = [lineItem];
+
+    // AUTOMATICALLY add specific parking fee for this vehicle type
+    const vehicleType = cartItem.taxi.type || '';
+    const parkingFeeVariantId = getParkingFeeVariantId(vehicleType);
+
+    if (parkingFeeVariantId) {
+        lines.push({
+            merchandiseId: parkingFeeVariantId,
+            quantity: 1,
+            attributes: [
+                { key: 'fee_type', value: 'Parking Fee' },
+                { key: 'vehicle_type', value: vehicleType },
+                { key: 'related_to', value: cartItem.taxi.name },
+                { key: 'booking_date', value: cartItem.search.date }
+            ]
+        });
+    } else {
+        console.warn(`⚠ No parking fee product found for vehicle type: ${vehicleType}`);
+    }
+
     const isDailyRental = cartItem.search.serviceType === 'daily-rental';
     const isReturn = cartItem.search.tripType === 'return';
 
-    // Build cart attributes based on booking type
     const cartAttributes: Array<{ key: string; value: string }> = [
         { key: 'booking_type', value: isDailyRental ? 'daily_rental' : 'transport_booking' },
         { key: 'vehicle_name', value: cartItem.taxi.name },
+        { key: 'vehicle_type', value: vehicleType },
+        { key: 'parking_fee_included', value: parkingFeeVariantId ? 'yes' : 'no' }
     ];
 
     if (isDailyRental) {
@@ -161,6 +224,7 @@ export const createCart = async (cartItem: CartItem, email?: string): Promise<st
         const pricePerDay = days > 1 ? (cartItem.totalPrice / days).toFixed(2) : cartItem.totalPrice.toFixed(2);
 
         note = `Daily Rental Booking: ${cartItem.taxi.name}
+Vehicle Type: ${vehicleType}
 
 Rental Type: ${cartItem.search.rentalType || 'Daily Rental'}
 Pickup Location: ${cartItem.search.from}
@@ -179,9 +243,12 @@ Passengers: ${cartItem.search.passengers || 1}
 Fare Calculation:
 ${days > 1 ? `Daily Rate: AED ${pricePerDay}
 Quantity: ${days} day${days > 1 ? 's' : ''}` : `Rate: AED ${pricePerDay}`}
-Total Fare: AED ${cartItem.totalPrice}`;
+Total Fare: AED ${cartItem.totalPrice}
++ Parking Fee - ${vehicleType} (see line items)`;
     } else if (isReturn) {
         note = `Round Trip Transport Booking: ${cartItem.taxi.name}
+Vehicle Type: ${vehicleType}
+
 From: ${cartItem.search.from}
 To: ${cartItem.search.to}
 Distance: ${cartItem.search.distance || 0} km (each way)
@@ -197,9 +264,12 @@ Time: ${cartItem.search.returnTime || 'N/A'}
 Fare Calculation:
 Trip Fare (${cartItem.search.distance || 0} km): AED ${cartItem.totalPrice / 2}
 Quantity: 2 trips (Round Trip)
-Total Fare: AED ${cartItem.totalPrice}`;
+Total Fare: AED ${cartItem.totalPrice}
++ Parking Fee - ${vehicleType} (see line items)`;
     } else {
         note = `Transport Booking: ${cartItem.taxi.name}
+Vehicle Type: ${vehicleType}
+
 From: ${cartItem.search.from}
 To: ${cartItem.search.to}
 Distance: ${cartItem.search.distance || 0} km
@@ -208,11 +278,12 @@ Pickup: ${cartItem.search.date} at ${cartItem.search.time}
 Fare Calculation:
 Base Fare: AED ${cartItem.taxi.baseFare}
 Distance Charge: ${cartItem.search.distance || 0} km × AED ${cartItem.taxi.perKmRate}/km = AED ${((cartItem.search.distance || 0) * cartItem.taxi.perKmRate).toFixed(2)}
-Total Fare: AED ${cartItem.totalPrice}`;
+Total Fare: AED ${cartItem.totalPrice}
++ Parking Fee - ${vehicleType} (see line items)`;
     }
 
     const cartInput: any = {
-        lines: [lineItem],
+        lines: lines,
         attributes: cartAttributes,
         note: note,
     };
@@ -221,7 +292,7 @@ Total Fare: AED ${cartItem.totalPrice}`;
     if (email) {
         cartInput.buyerIdentity = {
             email: email,
-            countryCode: 'AE', // United Arab Emirates
+            countryCode: 'AE',
         };
     }
 
@@ -240,9 +311,6 @@ Total Fare: AED ${cartItem.totalPrice}`;
     });
 
     const result = await response.json();
-
-    // Better error logging
-    console.log('Cart creation response:', result);
 
     if (result.errors) {
         console.error('GraphQL errors:', result.errors);

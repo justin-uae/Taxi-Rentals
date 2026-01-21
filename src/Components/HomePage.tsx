@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car, History } from 'lucide-react';
 import Banner5 from '../assets/Banner7.png';
+import { formatDate, formatDateWithOrdinal, generateCalendar, generateTimeSlots, isDateWithin12Hours, isPastDate, isTimeAtLeast12HoursFromNow, updateSelectedTimeToValid } from '../utils/common';
 
 declare global {
     interface Window {
@@ -28,8 +29,18 @@ const HomePage: React.FC = () => {
     // Common States
     const [pickupLocation, setPickupLocation] = useState('');
     const [pickupDetails, setPickupDetails] = useState<PlaceDetails | null>(null);
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-    const [selectedTime, setSelectedTime] = useState('10:00');
+    const [selectedDate, setSelectedDate] = useState<Date>(() => {
+        const now = new Date();
+        now.setHours(now.getHours() + 12);
+        return now;
+    });
+    const [selectedTime, setSelectedTime] = useState(() => {
+        const now = new Date();
+        now.setHours(now.getHours() + 12);
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = '00';
+        return `${hours}:${minutes}`;
+    });
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [numberOfPersons, setNumberOfPersons] = useState(1);
@@ -45,6 +56,7 @@ const HomePage: React.FC = () => {
     const [returnDate, setReturnDate] = useState<Date>(() => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(tomorrow.getHours() + 12);
         return tomorrow;
     });
     const [showReturnDatePicker, setShowReturnDatePicker] = useState(false);
@@ -56,11 +68,27 @@ const HomePage: React.FC = () => {
     const [distance, setDistance] = useState<number | null>(null);
     const [duration, setDuration] = useState<string | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
-    const [returnTime, setReturnTime] = useState('18:00');
+    const [returnTime, setReturnTime] = useState(() => {
+        const now = new Date();
+        now.setHours(now.getHours() + 12);
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = '00';
+        return `${hours}:${minutes}`;
+    });
 
     // Daily Rental specific States
-    const [dropoffDate, setDropoffDate] = useState<Date>(new Date());
-    const [dropoffTime, setDropoffTime] = useState('20:00');
+    const [dropoffDate, setDropoffDate] = useState<Date>(() => {
+        const now = new Date();
+        now.setHours(now.getHours() + 12);
+        return now;
+    });
+    const [dropoffTime, setDropoffTime] = useState(() => {
+        const now = new Date();
+        now.setHours(now.getHours() + 12);
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = '00';
+        return `${hours}:${minutes}`;
+    });
     const [showDropoffDatePicker, setShowDropoffDatePicker] = useState(false);
     const [currentDropoffMonth, setCurrentDropoffMonth] = useState(new Date());
 
@@ -70,18 +98,6 @@ const HomePage: React.FC = () => {
     const pickupAutocompleteRef = useRef<any>(null);
     const dropoffAutocompleteRef = useRef<any>(null);
 
-    // Generate time slots (every 15 minutes)
-    const generateTimeSlots = () => {
-        const times: string[] = [];
-        for (let hour = 0; hour < 24; hour++) {
-            for (let minute = 0; minute < 60; minute += 15) {
-                const h = hour.toString().padStart(2, '0');
-                const m = minute.toString().padStart(2, '0');
-                times.push(`${h}:${m}`);
-            }
-        }
-        return times;
-    };
 
     const formatTime12Hour = (time24: string) => {
         const [hours, minutes] = time24.split(':');
@@ -90,8 +106,6 @@ const HomePage: React.FC = () => {
         const hour12 = hour % 12 || 12;
         return `${hour12}:${minutes} ${ampm}`;
     };
-
-    const timeSlots = generateTimeSlots();
 
     // Calculate rental hours for daily rental
     const calculateRentalHours = (pickupDate: Date, pickupTime: string, dropoffDate: Date, dropoffTime: string) => {
@@ -342,10 +356,107 @@ const HomePage: React.FC = () => {
         );
     };
 
+    // Handle date change with 12-hour validation
+    const handleDateClick = (date: Date) => {
+        // Update the date
+        setSelectedDate(date);
+
+        // Update time to ensure it's valid
+        const updated = updateSelectedTimeToValid(date, selectedTime);
+        setSelectedDate(updated.date);
+        setSelectedTime(updated.time);
+
+        // If it's daily rental, also update dropoff date if it's before the new pickup date
+        if (serviceType === 'daily-rental') {
+            if (dropoffDate < updated.date) {
+                setDropoffDate(new Date(updated.date));
+                const dropoffUpdated = updateSelectedTimeToValid(updated.date, dropoffTime);
+                setDropoffDate(dropoffUpdated.date);
+                setDropoffTime(dropoffUpdated.time);
+            }
+        }
+
+        // If it's transfers with return trip, update return date if it's before the new departure date
+        if (serviceType === 'transfers' && tripType === 'return') {
+            if (returnDate < updated.date) {
+                const tomorrow = new Date(updated.date);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                setReturnDate(tomorrow);
+                const returnUpdated = updateSelectedTimeToValid(tomorrow, returnTime);
+                setReturnDate(returnUpdated.date);
+                setReturnTime(returnUpdated.time);
+            }
+        }
+
+        setShowDatePicker(false);
+    };
+
+    const handleReturnDateClick = (date: Date) => {
+        setReturnDate(date);
+
+        // Update return time to ensure it's valid
+        const updated = updateSelectedTimeToValid(date, returnTime);
+        setReturnDate(updated.date);
+        setReturnTime(updated.time);
+
+        setShowReturnDatePicker(false);
+    };
+
+    const handleDropoffDateClick = (date: Date) => {
+        setDropoffDate(date);
+
+        // Update dropoff time to ensure it's valid
+        const updated = updateSelectedTimeToValid(date, dropoffTime);
+        setDropoffDate(updated.date);
+        setDropoffTime(updated.time);
+
+        setShowDropoffDatePicker(false);
+    };
+
+    // Handle time change with validation
+    const handlePickupTimeChange = (time: string) => {
+        // Check if the selected time is at least 12 hours from now
+        if (!isTimeAtLeast12HoursFromNow(selectedDate, time)) {
+            alert('Please select a time at least 12 hours from now');
+            return;
+        }
+        setSelectedTime(time);
+    };
+
+    const handleReturnTimeChange = (time: string) => {
+        // Check if the selected time is at least 12 hours from now
+        if (!isTimeAtLeast12HoursFromNow(returnDate, time)) {
+            alert('Please select a time at least 12 hours from now');
+            return;
+        }
+        setReturnTime(time);
+    };
+
+    const handleDropoffTimeChange = (time: string) => {
+        // Check if the selected time is at least 12 hours from now
+        if (!isTimeAtLeast12HoursFromNow(dropoffDate, time)) {
+            alert('Please select a time at least 12 hours from now');
+            return;
+        }
+        setDropoffTime(time);
+    };
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validate pickup time is at least 12 hours from now
+        // if (!isTimeAtLeast12HoursFromNow(selectedDate, selectedTime)) {
+        //     alert('Pickup time must be at least 12 hours from now');
+        //     return;
+        // }
+
         if (serviceType === 'transfers') {
+            // Validate return time for return trips
+            if (tripType === 'return' && !isTimeAtLeast12HoursFromNow(returnDate, returnTime)) {
+                alert('Return time must be at least 12 hours from now');
+                return;
+            }
+
             if (!pickupLocation || !dropoffLocation) {
                 alert('Please select both pickup and dropoff locations');
                 return;
@@ -370,6 +481,12 @@ const HomePage: React.FC = () => {
             });
         } else {
             // Daily Rental
+            // Validate dropoff time is at least 12 hours from now
+            // if (!isTimeAtLeast12HoursFromNow(dropoffDate, dropoffTime)) {
+            //     alert('Dropoff time must be at least 12 hours from now');
+            //     return;
+            // }
+
             if (!pickupLocation) {
                 alert('Please select a pickup location');
                 return;
@@ -402,48 +519,6 @@ const HomePage: React.FC = () => {
         }
     };
 
-    const formatDate = (date: Date): string => {
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${month}/${day}/${year}`;
-    };
-
-    const handleDateClick = (date: Date) => {
-        setSelectedDate(date);
-        setShowDatePicker(false);
-    };
-
-    const handleReturnDateClick = (date: Date) => {
-        setReturnDate(date);
-        setShowReturnDatePicker(false);
-    };
-
-    const handleDropoffDateClick = (date: Date) => {
-        setDropoffDate(date);
-        setShowDropoffDatePicker(false);
-    };
-
-    const generateCalendar = (currentMonthDate: Date) => {
-        const year = currentMonthDate.getFullYear();
-        const month = currentMonthDate.getMonth();
-
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const startingDayOfWeek = firstDay.getDay();
-
-        const days = [];
-
-        for (let i = 0; i < startingDayOfWeek; i++) {
-            days.push(null);
-        }
-
-        for (let day = 1; day <= lastDay.getDate(); day++) {
-            days.push(new Date(year, month, day));
-        }
-
-        return days;
-    };
 
     const isDateSelected = (date: Date, type: 'departure' | 'return' | 'dropoff') => {
         if (!date) return false;
@@ -454,12 +529,6 @@ const HomePage: React.FC = () => {
         } else {
             return date.toDateString() === dropoffDate.toDateString();
         }
-    };
-
-    const isPastDate = (date: Date) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return date < today;
     };
 
     const isBeforeDeparture = (date: Date) => {
@@ -485,6 +554,11 @@ const HomePage: React.FC = () => {
     const currentRentalHours = serviceType === 'daily-rental'
         ? calculateRentalHours(selectedDate, selectedTime, dropoffDate, dropoffTime)
         : 0;
+
+    // Get time slots for current selection
+    const pickupTimeSlots = generateTimeSlots(selectedDate);
+    const returnTimeSlots = generateTimeSlots(returnDate, true);
+    const dropoffTimeSlots = generateTimeSlots(dropoffDate);
 
     return (
         <div className="min-h-screen bg-white">
@@ -778,6 +852,11 @@ const HomePage: React.FC = () => {
                                                     <span className="hidden sm:inline">Pickup Date</span>
                                                     <span className="sm:hidden">Pickup</span>
                                                 </label>
+                                                {isDateWithin12Hours(selectedDate) && (
+                                                    <span className="text-xs text-red-600 font-medium">
+                                                        *12h
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                 <button
@@ -786,7 +865,7 @@ const HomePage: React.FC = () => {
                                                     className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
                                                 >
                                                     <div className="text-gray-700 font-medium text-xs sm:text-sm">
-                                                        {selectedDate.getDate()}/{selectedDate.getMonth() + 1}/{selectedDate.getFullYear().toString().slice(-2)}
+                                                        {formatDateWithOrdinal(selectedDate)}
                                                     </div>
                                                 </button>
                                             </div>
@@ -837,17 +916,18 @@ const HomePage: React.FC = () => {
 
                                                             const isToday = date.toDateString() === new Date().toDateString();
                                                             const isPast = isPastDate(date);
+                                                            const isWithin12Hours = isDateWithin12Hours(date);
                                                             const isSelected = isDateSelected(date, 'departure');
 
                                                             return (
                                                                 <button
                                                                     key={index}
                                                                     type="button"
-                                                                    onClick={() => !isPast && handleDateClick(date)}
-                                                                    disabled={isPast}
+                                                                    onClick={() => !isPast && !isWithin12Hours && handleDateClick(date)}
+                                                                    disabled={isPast || isWithin12Hours}
                                                                     className={`
                                                                 aspect-square rounded-lg text-sm font-medium transition-all duration-200
-                                                                ${isPast
+                                                                ${isPast || isWithin12Hours
                                                                             ? 'text-gray-300 cursor-not-allowed'
                                                                             : 'hover:bg-purple-50 cursor-pointer'
                                                                         }
@@ -857,6 +937,7 @@ const HomePage: React.FC = () => {
                                                                         }
                                                                 ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
                                                             `}
+                                                                    title={isWithin12Hours ? 'Must be at least 12 hours from now' : ''}
                                                                 >
                                                                     {date.getDate()}
                                                                 </button>
@@ -868,12 +949,13 @@ const HomePage: React.FC = () => {
                                                         <button
                                                             type="button"
                                                             onClick={() => {
-                                                                setSelectedDate(new Date());
-                                                                setCurrentMonth(new Date());
+                                                                const tomorrow = new Date();
+                                                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                                                handleDateClick(tomorrow);
                                                             }}
                                                             className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
                                                         >
-                                                            Today
+                                                            Tomorrow
                                                         </button>
                                                         <button
                                                             type="button"
@@ -901,14 +983,18 @@ const HomePage: React.FC = () => {
                                             <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                 <select
                                                     value={selectedTime}
-                                                    onChange={(e) => setSelectedTime(e.target.value)}
+                                                    onChange={(e) => handlePickupTimeChange(e.target.value)}
                                                     className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium"
                                                 >
-                                                    {timeSlots.map((time) => (
-                                                        <option key={time} value={time}>
-                                                            {formatTime12Hour(time)}
-                                                        </option>
-                                                    ))}
+                                                    {pickupTimeSlots.length > 0 ? (
+                                                        pickupTimeSlots.map((time) => (
+                                                            <option key={time} value={time}>
+                                                                {formatTime12Hour(time)}
+                                                            </option>
+                                                        ))
+                                                    ) : (
+                                                        <option value="">No available times</option>
+                                                    )}
                                                 </select>
                                                 <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                                                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -916,6 +1002,11 @@ const HomePage: React.FC = () => {
                                                     </svg>
                                                 </div>
                                             </div>
+                                            {pickupTimeSlots.length === 0 && (
+                                                <p className="text-xs text-red-600 mt-1">
+                                                    No available times for today. Please select a future date.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -932,6 +1023,11 @@ const HomePage: React.FC = () => {
                                                         <span className="hidden sm:inline">Dropoff Date</span>
                                                         <span className="sm:hidden">Dropoff</span>
                                                     </label>
+                                                    {isDateWithin12Hours(dropoffDate) && (
+                                                        <span className="text-xs text-red-600 font-medium">
+                                                            *12h
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                     <button
@@ -940,7 +1036,7 @@ const HomePage: React.FC = () => {
                                                         className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all duration-200 cursor-pointer text-left"
                                                     >
                                                         <div className="text-gray-700 font-medium text-xs sm:text-sm">
-                                                            {dropoffDate.getDate()}/{dropoffDate.getMonth() + 1}/{dropoffDate.getFullYear().toString().slice(-2)}
+                                                            {formatDateWithOrdinal(dropoffDate)}
                                                         </div>
                                                     </button>
                                                 </div>
@@ -992,6 +1088,7 @@ const HomePage: React.FC = () => {
 
                                                                 const isToday = date.toDateString() === new Date().toDateString();
                                                                 const isPast = isPastDate(date);
+                                                                const isWithin12Hours = isDateWithin12Hours(date);
                                                                 const isBefore = isBeforeDeparture(date);
                                                                 const isSelected = isDateSelected(date, 'dropoff');
 
@@ -999,11 +1096,11 @@ const HomePage: React.FC = () => {
                                                                     <button
                                                                         key={index}
                                                                         type="button"
-                                                                        onClick={() => !isPast && !isBefore && handleDropoffDateClick(date)}
-                                                                        disabled={isPast || isBefore}
+                                                                        onClick={() => !isPast && !isWithin12Hours && !isBefore && handleDropoffDateClick(date)}
+                                                                        disabled={isPast || isWithin12Hours || isBefore}
                                                                         className={`
                                                                     aspect-square rounded-lg text-sm font-medium transition-all duration-200
-                                                                    ${isPast || isBefore
+                                                                    ${isPast || isWithin12Hours || isBefore
                                                                                 ? 'text-gray-300 cursor-not-allowed'
                                                                                 : 'hover:bg-green-50 cursor-pointer'
                                                                             }
@@ -1013,6 +1110,7 @@ const HomePage: React.FC = () => {
                                                                             }
                                                                     ${isToday && !isSelected ? 'border-2 border-green-500' : ''}
                                                                 `}
+                                                                        title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after pickup date' : ''}
                                                                     >
                                                                         {date.getDate()}
                                                                     </button>
@@ -1024,12 +1122,13 @@ const HomePage: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    setDropoffDate(new Date(selectedDate));
-                                                                    setCurrentDropoffMonth(new Date(selectedDate));
+                                                                    const nextDay = new Date(selectedDate);
+                                                                    nextDay.setDate(nextDay.getDate() + 1);
+                                                                    handleDropoffDateClick(nextDay);
                                                                 }}
                                                                 className="text-sm text-green-600 hover:text-green-700 font-semibold"
                                                             >
-                                                                Same Day
+                                                                Next Day
                                                             </button>
                                                             <button
                                                                 type="button"
@@ -1057,14 +1156,18 @@ const HomePage: React.FC = () => {
                                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                     <select
                                                         value={dropoffTime}
-                                                        onChange={(e) => setDropoffTime(e.target.value)}
+                                                        onChange={(e) => handleDropoffTimeChange(e.target.value)}
                                                         className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium"
                                                     >
-                                                        {timeSlots.map((time) => (
-                                                            <option key={time} value={time}>
-                                                                {formatTime12Hour(time)}
-                                                            </option>
-                                                        ))}
+                                                        {dropoffTimeSlots.length > 0 ? (
+                                                            dropoffTimeSlots.map((time) => (
+                                                                <option key={time} value={time}>
+                                                                    {formatTime12Hour(time)}
+                                                                </option>
+                                                            ))
+                                                        ) : (
+                                                            <option value="">No available times</option>
+                                                        )}
                                                     </select>
                                                     <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                                                         <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1072,6 +1175,11 @@ const HomePage: React.FC = () => {
                                                         </svg>
                                                     </div>
                                                 </div>
+                                                {dropoffTimeSlots.length === 0 && (
+                                                    <p className="text-xs text-red-600 mt-1">
+                                                        No available times for today. Please select a future date.
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -1088,6 +1196,11 @@ const HomePage: React.FC = () => {
                                                         </div>
                                                         Return Date
                                                     </label>
+                                                    {isDateWithin12Hours(returnDate) && (
+                                                        <span className="text-xs text-red-600 font-medium">
+                                                            *12h
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                     <button
@@ -1096,7 +1209,7 @@ const HomePage: React.FC = () => {
                                                         className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
                                                     >
                                                         <div className="text-gray-700 font-medium text-sm">
-                                                            {returnDate.getDate()}/{returnDate.getMonth() + 1}/{returnDate.getFullYear().toString().slice(-2)}
+                                                            {formatDateWithOrdinal(returnDate)}
                                                         </div>
                                                     </button>
                                                 </div>
@@ -1148,6 +1261,7 @@ const HomePage: React.FC = () => {
 
                                                                 const isToday = date.toDateString() === new Date().toDateString();
                                                                 const isPast = isPastDate(date);
+                                                                const isWithin12Hours = isDateWithin12Hours(date);
                                                                 const isBefore = isBeforeDeparture(date);
                                                                 const isSelected = isDateSelected(date, 'return');
 
@@ -1155,11 +1269,11 @@ const HomePage: React.FC = () => {
                                                                     <button
                                                                         key={index}
                                                                         type="button"
-                                                                        onClick={() => !isPast && !isBefore && handleReturnDateClick(date)}
-                                                                        disabled={isPast || isBefore}
+                                                                        onClick={() => !isPast && !isWithin12Hours && !isBefore && handleReturnDateClick(date)}
+                                                                        disabled={isPast || isWithin12Hours || isBefore}
                                                                         className={`
                                                                     aspect-square rounded-lg text-sm font-medium transition-all duration-200
-                                                                    ${isPast || isBefore
+                                                                    ${isPast || isWithin12Hours || isBefore
                                                                                 ? 'text-gray-300 cursor-not-allowed'
                                                                                 : 'hover:bg-purple-50 cursor-pointer'
                                                                             }
@@ -1169,6 +1283,7 @@ const HomePage: React.FC = () => {
                                                                             }
                                                                     ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
                                                                 `}
+                                                                        title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after departure date' : ''}
                                                                     >
                                                                         {date.getDate()}
                                                                     </button>
@@ -1180,10 +1295,9 @@ const HomePage: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    const tomorrow = new Date(selectedDate);
-                                                                    tomorrow.setDate(tomorrow.getDate() + 1);
-                                                                    setReturnDate(tomorrow);
-                                                                    setCurrentReturnMonth(tomorrow);
+                                                                    const nextDay = new Date(selectedDate);
+                                                                    nextDay.setDate(nextDay.getDate() + 1);
+                                                                    handleReturnDateClick(nextDay);
                                                                 }}
                                                                 className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
                                                             >
@@ -1213,14 +1327,18 @@ const HomePage: React.FC = () => {
                                                 <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                     <select
                                                         value={returnTime}
-                                                        onChange={(e) => setReturnTime(e.target.value)}
+                                                        onChange={(e) => handleReturnTimeChange(e.target.value)}
                                                         className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 transition-all duration-200 appearance-none cursor-pointer font-medium text-sm"
                                                     >
-                                                        {timeSlots.map((time) => (
-                                                            <option key={time} value={time}>
-                                                                {formatTime12Hour(time)}
-                                                            </option>
-                                                        ))}
+                                                        {returnTimeSlots.length > 0 ? (
+                                                            returnTimeSlots.map((time) => (
+                                                                <option key={time} value={time}>
+                                                                    {formatTime12Hour(time)}
+                                                                </option>
+                                                            ))
+                                                        ) : (
+                                                            <option value="">No available times</option>
+                                                        )}
                                                     </select>
                                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                                                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1228,6 +1346,11 @@ const HomePage: React.FC = () => {
                                                         </svg>
                                                     </div>
                                                 </div>
+                                                {returnTimeSlots.length === 0 && (
+                                                    <p className="text-xs text-red-600 mt-1">
+                                                        No available times for today. Please select a future date.
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -1356,6 +1479,16 @@ const HomePage: React.FC = () => {
                                             </div>
                                             <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">
                                                 All Over UAE
+                                            </span>
+                                        </div>
+                                        <div className="group flex items-center gap-4 transform hover:scale-105 transition-all duration-300">
+                                            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-2xl group-hover:shadow-orange-500/50 transition-all duration-300">
+                                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                            <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">
+                                                Low Price Guaranteed
                                             </span>
                                         </div>
                                     </div>

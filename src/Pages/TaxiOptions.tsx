@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchTaxiProducts } from '../store/slices/shopifySlice';
 import { createCheckout } from '../store/slices/cartSlice';
 import { selectVariantByDistance } from '../utils/variantSelector';
+import { formatDateDisplay } from '../utils/common';
 
 const TaxiOptions: React.FC = () => {
     const location = useLocation();
@@ -561,7 +562,7 @@ const TaxiOptions: React.FC = () => {
                                                             <div className="bg-blue-50 p-2 rounded-lg">
                                                                 <p className="text-xs font-semibold text-blue-700 mb-1">→ Outbound</p>
                                                                 <div className="text-xs text-gray-700">
-                                                                    <div>{searchDetails.date} at {searchDetails.time}</div>
+                                                                    <div> {formatDateDisplay(searchDetails.date)} at {searchDetails.time}</div>
                                                                     <div className="text-gray-500">{distance.toFixed(1)} km</div>
                                                                 </div>
                                                             </div>
@@ -571,7 +572,7 @@ const TaxiOptions: React.FC = () => {
                                                                 <div className="bg-green-50 p-2 rounded-lg">
                                                                     <p className="text-xs font-semibold text-green-700 mb-1">← Return</p>
                                                                     <div className="text-xs text-gray-700">
-                                                                        <div>{searchDetails.returnDate} at {searchDetails.returnTime}</div>
+                                                                        <div>{formatDateDisplay(searchDetails.returnDate)} at {searchDetails.returnTime}</div>
                                                                         <div className="text-gray-500">{distance.toFixed(1)} km</div>
                                                                     </div>
                                                                 </div>
@@ -581,7 +582,7 @@ const TaxiOptions: React.FC = () => {
                                                         <>
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-600">Date & Time</span>
-                                                                <span className="font-semibold text-gray-900">{searchDetails.date} at {searchDetails.time}</span>
+                                                                <span className="font-semibold text-gray-900">{formatDateDisplay(searchDetails.date)} at {searchDetails.time}</span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span className="text-gray-600">Distance</span>

@@ -14,7 +14,6 @@ const Contact: React.FC = () => {
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER;
     const phoneNumber2 = import.meta.env.VITE_CONTACT_NUMBER_SECOND;
     const companyEmail = import.meta.env.VITE_COMPANY_EMAIL;
     const appURL = import.meta.env.VITE_APP_URL;
@@ -344,12 +343,9 @@ const Contact: React.FC = () => {
                                     <div className="min-w-0">
                                         <h3 className="font-black text-base text-gray-900 mb-1">Phone</h3>
                                         <a href={`tel:${phoneNumber2}`} className="text-sm text-orange-700 hover:text-orange-800 transition-colors break-all font-bold">
-                                            +{phoneNumber2}
+                                            +971 567 643 588
                                         </a>
                                         <br />
-                                        <a href={`tel:${phoneNumber}`} className="text-sm text-orange-700 hover:text-orange-800 transition-colors break-all font-bold">
-                                            {phoneNumber},
-                                        </a>
                                     </div>
                                 </div>
 

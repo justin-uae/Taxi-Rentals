@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronLeft, Calendar, Navigation, ArrowRight } from 'lucide-react';
 import type { HeaderProps } from '../../types';
+import { formatDateDisplay } from '../../utils/common';
 
 const TaxiHeader: React.FC<HeaderProps> = ({ searchDetails, onEditSearch, isMobile = false }) => {
     const distance = searchDetails.distance || 18.5;
@@ -56,7 +57,7 @@ const TaxiHeader: React.FC<HeaderProps> = ({ searchDetails, onEditSearch, isMobi
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4" />
-                        <span>{searchDetails.date} at {searchDetails.time}</span>
+                        <span>{formatDateDisplay(searchDetails.date)} at {searchDetails.time}</span>
                     </div>
                     <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-full border border-green-200">
                         <Navigation className="h-4 w-4 text-green-600" />

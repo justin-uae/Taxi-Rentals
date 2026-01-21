@@ -4,10 +4,10 @@ import Banner from '../assets/Banner6.png';
 
 const AboutUs: React.FC = () => {
     const stats = [
-        { icon: Users, value: '50K+', label: 'Happy Passengers', color: 'from-blue-500 to-blue-600' },
-        { icon: Car, value: '500+', label: 'Professional Drivers', color: 'from-orange-500 to-orange-600' },
+        { icon: Users, value: '30K+', label: 'Happy Passengers', color: 'from-blue-500 to-blue-600' },
+        { icon: Car, value: '300+', label: 'Professional Drivers', color: 'from-orange-500 to-orange-600' },
         { icon: Clock, value: '24/7', label: 'Available Service', color: 'from-green-500 to-green-600' },
-        { icon: Award, value: '15+', label: 'Years Experience', color: 'from-purple-500 to-purple-600' }
+        { icon: Award, value: '7+', label: 'Years Experience', color: 'from-purple-500 to-purple-600' }
     ];
 
     const values = [
@@ -50,10 +50,10 @@ const AboutUs: React.FC = () => {
     ];
 
     const milestones = [
-        { year: '2009', title: 'Founded', description: 'UAE Transfers was established with a vision to revolutionize chauffeur-driven transport services in UAE' },
-        { year: '2012', title: 'Fleet Expansion', description: 'Expanded our professional driver team to 100+ across Dubai and Abu Dhabi' },
-        { year: '2016', title: 'Technology Integration', description: 'Launched our mobile app for seamless transfer and daily booking experience' },
-        { year: '2020', title: 'Premium Services', description: 'Introduced luxury chauffeur services and electric vehicle options with professional drivers' },
+        { year: '2017', title: 'Founded', description: 'UAE Transfers was established with a vision to revolutionize chauffeur-driven transport services in UAE' },
+        { year: '2019', title: 'Fleet Expansion', description: 'Expanded our professional driver team to 100+ across Dubai and Abu Dhabi' },
+        { year: '2021', title: 'Technology Integration', description: 'Launched our mobile app for seamless transfer and daily booking experience' },
+        { year: '2023', title: 'Premium Services', description: 'Introduced luxury chauffeur services and electric vehicle options with professional drivers' },
         { year: '2024', title: 'Market Leader', description: 'Became one of the most trusted chauffeur-driven transport services in UAE' }
     ];
 
@@ -88,7 +88,7 @@ const AboutUs: React.FC = () => {
                             Your Trusted Partner in Premium Chauffeur-Driven Transportation
                         </p>
                         <p className="text-lg md:text-xl leading-relaxed max-w-3xl mx-auto animate-fade-in-delay-2">
-                            Since 2009, we've been providing safe, reliable, and comfortable chauffeur-driven transport services across Dubai and Abu Dhabi. Our commitment to excellence has made us the preferred choice for thousands of passengers seeking professional drivers.
+                            Since 2017, we've been providing safe, reliable, and comfortable chauffeur-driven transport services across Dubai and Abu Dhabi. Our commitment to excellence has made us the preferred choice for thousands of passengers seeking professional drivers.
                         </p>
                     </div>
                 </div>
@@ -122,13 +122,13 @@ const AboutUs: React.FC = () => {
                             </h2>
                             <div className="space-y-4 text-gray-700 leading-relaxed">
                                 <p>
-                                    Founded in 2009, UAE Transfers began with a simple mission: to provide the most reliable and comfortable chauffeur-driven transport service in the UAE. What started with a small team of 10 professional drivers has grown into one of the region's most trusted transportation providers.
+                                    Founded in 2017, UAE Transfers began with a simple mission: to provide the most reliable and comfortable chauffeur-driven transport service in the UAE. What started with a small team of professional drivers has grown into one of the region's most trusted transportation providers.
                                 </p>
                                 <p>
                                     Our journey has been driven by our unwavering commitment to passenger satisfaction, safety, and innovation. We've embraced technology while maintaining the personal touch and professional service that sets us apart.
                                 </p>
                                 <p>
-                                    Today, we're proud to serve over 50,000 satisfied passengers annually, operating with 500+ professional chauffeurs who share our passion for excellence in every transfer and daily booking.
+                                    Today, we're proud to serve over 30,000 satisfied passengers annually, operating with 300+ professional chauffeurs who share our passion for excellence in every transfer and daily booking.
                                 </p>
                             </div>
                         </div>

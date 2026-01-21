@@ -13,8 +13,7 @@ const Footer: React.FC = () => {
         { name: 'Contact Us', href: '/contact' },
     ];
 
-    const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER;
-    const phoneNumber2 = import.meta.env.VITE_CONTACT_NUMBER_SECOND;
+    const phoneNumber = import.meta.env.VITE_CONTACT_NUMBER_SECOND;
     const companyEmail = import.meta.env.VITE_COMPANY_EMAIL;
     const appURL = import.meta.env.VITE_APP_URL;
 
@@ -32,7 +31,7 @@ const Footer: React.FC = () => {
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8">
                     {/* Company Info */}
                     <div className="flex flex-col items-center md:items-start gap-4 w-full md:w-auto">
                         {/* Logo/Brand */}
@@ -49,37 +48,34 @@ const Footer: React.FC = () => {
                         </Link>
 
                         {/* Contact Info */}
-                        <div className="flex flex-col items-center md:items-start gap-3 mt-2">
+                        <div className="flex flex-col items-start gap-3 mt-2">
                             <div className="flex items-center gap-2 group">
-                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">
-                                    <MapPin className="w-4 h-4 text-white flex-shrink-0" />
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                    <MapPin className="w-4 h-4 text-white" />
                                 </div>
-                                <span className="text-sm text-center md:text-left font-medium">
+                                <span className="text-sm text-left font-medium">
                                     Dubai : Hor Al Anz - Building 101, Dubai, UAE
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 group">
-                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">
-                                    <MapPin className="w-4 h-4 text-white flex-shrink-0" />
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                    <MapPin className="w-4 h-4 text-white" />
                                 </div>
-                                <span className="text-sm text-center md:text-left font-medium">
+                                <span className="text-sm text-left font-medium">
                                     Abu Dhabi : Khalidiyah Towers, Corniche Road, Abu Dhabi, UAE
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 group">
-                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">
-                                    <Phone className="w-4 h-4 text-white flex-shrink-0" />
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                    <Phone className="w-4 h-4 text-white" />
                                 </div>
                                 <a href={`tel:+${phoneNumber}`} className="text-sm hover:text-orange-400 transition-colors font-medium">
-                                    {phoneNumber},
-                                </a>
-                                <a href={`tel:+${phoneNumber2}`} className="text-sm hover:text-orange-400 transition-colors font-medium">
-                                    {phoneNumber2}
+                                    +971 567 643 588
                                 </a>
                             </div>
                             <div className="flex items-center gap-2 group">
-                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">
-                                    <Mail className="w-4 h-4 text-white flex-shrink-0" />
+                                <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform flex-shrink-0">
+                                    <Mail className="w-4 h-4 text-white" />
                                 </div>
                                 <a href={`mailto:${companyEmail}`} className="text-sm hover:text-orange-400 transition-colors font-medium">
                                     {companyEmail}
@@ -89,7 +85,7 @@ const Footer: React.FC = () => {
                     </div>
 
                     {/* Quick Links */}
-                    <div className="flex flex-col items-center md:items-end gap-4">
+                    <div className="flex flex-col items-center md:items-end gap-4 w-full md:w-auto">
                         <div>
                             <h3 className="text-orange-400 font-bold text-sm uppercase tracking-wider mb-3 text-center md:text-right">
                                 Quick Links
