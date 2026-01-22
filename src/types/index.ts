@@ -21,6 +21,8 @@ export interface SearchDetails {
     rentalType?: string;
     numberOfDays?: number;
     rentalHours?: number;
+    flightNumber?: string;
+    parkingAcknowledged?: boolean;
 }
 // Daily Rental Search Details
 export interface DailyRentalSearchDetails {

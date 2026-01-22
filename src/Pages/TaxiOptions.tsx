@@ -363,10 +363,10 @@ const TaxiOptions: React.FC = () => {
                                         />
                                         <div className="flex-1">
                                             <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                                                I acknowledge that parking fees will be collected separately
+                                                I acknowledge that parking fees will be collected
                                             </p>
                                             <p className="text-xs text-gray-600 mt-1">
-                                                Airport parking charges (if applicable) will be paid directly to the driver
+                                                Airport parking charges applicable
                                             </p>
                                         </div>
                                     </label>
@@ -508,10 +508,10 @@ const TaxiOptions: React.FC = () => {
                                                         />
                                                         <div className="flex-1">
                                                             <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                                                                I acknowledge that parking fees will be collected separately
+                                                                I acknowledge that parking fees will be collected
                                                             </p>
                                                             <p className="text-xs text-gray-600 mt-1">
-                                                                Airport parking charges (if applicable) will be paid directly to the driver
+                                                                Airport parking charges applicable
                                                             </p>
                                                         </div>
                                                     </label>

@@ -1034,10 +1034,10 @@ Please provide me with pricing options and availability.`;
                                             />
                                             <div className="flex-1">
                                                 <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-                                                    I acknowledge that parking fees will be collected separately <span className="text-red-500">*</span>
+                                                    I acknowledge that parking fees will be collected<span className="text-red-500">*</span>
                                                 </p>
                                                 <p className="text-xs text-gray-600 mt-1">
-                                                    Airport parking charges (if applicable) will be paid directly to the driver
+                                                    Airport parking charges applicable
                                                 </p>
                                             </div>
                                         </label>
