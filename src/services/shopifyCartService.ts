@@ -74,6 +74,33 @@ const getParkingFeeVariantId = (vehicleType: string): string | null => {
  * 
  * This allows dynamic pricing while using Shopify's native system
  */
+
+const formatDateToReadable = (dateString: string): string => {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+
+    // Get day with ordinal suffix
+    const day = date.getDate();
+    const suffix = (day: number) => {
+        if (day > 3 && day < 21) return 'th';
+        switch (day % 10) {
+            case 1: return 'st';
+            case 2: return 'nd';
+            case 3: return 'rd';
+            default: return 'th';
+        }
+    };
+
+    // Get month name
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${day}${suffix(day)} ${month} ${year}`;
+};
+
 export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput => {
     const isReturn = cartItem.search.tripType === 'return';
     const isDailyRental = cartItem.search.serviceType === 'daily-rental';
@@ -90,49 +117,45 @@ export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput =>
 
     // Build attributes based on booking type
     const attributes: Array<{ key: string; value: string }> = [
-        { key: 'booking_type', value: isDailyRental ? 'Daily Rental' : 'Transport Booking' },
-        { key: 'vehicle', value: cartItem.taxi.name },
+        { key: 'Booking Type', value: isDailyRental ? 'Daily Rental' : 'Transport Booking' },
+        { key: 'Vehicle', value: cartItem.taxi.name },
     ];
 
     if (isDailyRental) {
         attributes.push(
-            { key: 'rental_type', value: cartItem.search.rentalType || 'Daily Rental' },
-            { key: 'pickup_location', value: cartItem.search.from },
-            { key: 'pickup_date', value: cartItem.search.pickupDate || cartItem.search.date },
-            { key: 'pickup_time', value: cartItem.search.pickupTime || cartItem.search.time },
-            { key: 'dropoff_date', value: cartItem.search.dropoffDate || cartItem.search.date },
-            { key: 'dropoff_time', value: cartItem.search.dropoffTime || '' },
-            { key: 'rental_hours', value: `${cartItem.search.rentalHours?.toFixed(1) || 0}` },
-            { key: 'number_of_days', value: `${cartItem.search.numberOfDays || 1}` },
-            { key: 'passengers', value: `${cartItem.search.passengers || 1}` },
-            { key: 'total_fare', value: `AED ${cartItem.totalPrice}` }
+            { key: 'Rental Type', value: cartItem.search.rentalType || 'Daily Rental' },
+            { key: 'Pickup Location', value: cartItem.search.from },
+            { key: 'Pickup Date', value: formatDateToReadable(cartItem.search.pickupDate || cartItem.search.date) },
+            { key: 'Pickup Time', value: cartItem.search.pickupTime || cartItem.search.time },
+            { key: 'Dropoff Date', value: formatDateToReadable(cartItem.search.dropoffDate || cartItem.search.date) },
+            { key: 'Dropoff Time', value: cartItem.search.dropoffTime || '' },
+            { key: 'Number of Days', value: `${cartItem.search.numberOfDays || 1}` },
+            { key: 'Passengers', value: `${cartItem.search.passengers || 1}` }
         );
 
         // Add flight number if it's an airport trip
         if (cartItem.search.flightNumber) {
-            attributes.push({ key: 'flight_number', value: cartItem.search.flightNumber });
+            attributes.push({ key: 'Flight Number', value: cartItem.search.flightNumber });
         }
     } else {
         // Transfer specific attributes
         attributes.push(
-            { key: 'trip_type', value: isReturn ? 'Round Trip' : 'One-Way' },
-            { key: 'from_location', value: cartItem.search.from },
-            { key: 'to_location', value: cartItem.search.to },
-            { key: 'distance', value: `${cartItem.search.distance || 0} km${isReturn ? ' (each way)' : ''}` },
-            { key: 'duration', value: cartItem.search.duration || '' },
-            { key: 'outbound_date', value: cartItem.search.date },
-            { key: 'outbound_time', value: cartItem.search.time }
+            { key: 'Trip Type', value: isReturn ? 'Round Trip' : 'One-Way' },
+            { key: 'From Location', value: cartItem.search.from },
+            { key: 'To Location', value: cartItem.search.to },
+            { key: 'Distance', value: `${Math.round(cartItem.search.distance || 0)} km${isReturn ? ' (each way)' : ''}` },
+            { key: 'Duration', value: cartItem.search.duration || '' },
+            { key: 'Outbound Date', value: formatDateToReadable(cartItem.search.date) },
+            { key: 'Outbound Time', value: cartItem.search.time }
         );
 
         // Return details (if applicable)
         if (isReturn && cartItem.search.returnDate) {
             attributes.push(
-                { key: 'return_date', value: cartItem.search.returnDate },
-                { key: 'return_time', value: cartItem.search.returnTime || '' }
+                { key: 'Return Date', value: formatDateToReadable(cartItem.search.returnDate) },
+                { key: 'Return Time', value: cartItem.search.returnTime || '' }
             );
         }
-
-        attributes.push({ key: 'total_fare', value: `AED ${cartItem.totalPrice}` });
     }
 
     return {
@@ -180,82 +203,79 @@ export const createCart = async (
 
     const lineItem = cartItemToLineInput(cartItem);
 
-    // Start with main booking line item
-    const lines: ShopifyCartLineInput[] = [lineItem];
-
     // Check if this is an airport location (pickup or destination)
     const pickupLocation = cartItem.search.from || '';
     const dropoffLocation = cartItem.search.to || '';
     const isAirportTrip = isAirportLocation(pickupLocation) || isAirportLocation(dropoffLocation);
 
-    // ONLY add parking fee if it's an airport trip
+    // Prepare parking fee if it's an airport trip
     let parkingFeeVariantId: string | null = null;
     if (isAirportTrip) {
         const vehicleType = cartItem.taxi.type || '';
         parkingFeeVariantId = getParkingFeeVariantId(vehicleType);
 
-        if (parkingFeeVariantId) {
-            lines.push({
-                merchandiseId: parkingFeeVariantId,
-                quantity: 1,
-                attributes: [
-                    { key: 'fee_type', value: 'Airport Parking Fee' },
-                    { key: 'vehicle_type', value: vehicleType },
-                    { key: 'related_to', value: cartItem.taxi.name },
-                    { key: 'booking_date', value: cartItem.search.date },
-                    { key: 'pickup_location', value: pickupLocation },
-                    { key: 'dropoff_location', value: dropoffLocation || pickupLocation }
-                ]
-            });
-        } else {
+        if (!parkingFeeVariantId) {
             console.warn(`⚠ No parking fee product found for vehicle type: ${vehicleType}`);
         }
-    } else {
+    }
+
+    // Build lines array with correct order: 1. Vehicle, 2. Parking Fee
+    const lines: ShopifyCartLineInput[] = [lineItem];
+
+    // Add parking fee as second item if applicable
+    if (isAirportTrip && parkingFeeVariantId) {
+        lines.push({
+            merchandiseId: parkingFeeVariantId,
+            quantity: 1,
+            attributes: [
+                { key: 'Fee Type', value: 'Airport Parking Charge' },
+            ]
+        });
     }
 
     const isDailyRental = cartItem.search.serviceType === 'daily-rental';
     const isReturn = cartItem.search.tripType === 'return';
 
     const cartAttributes: Array<{ key: string; value: string }> = [
-        { key: 'booking_type', value: isDailyRental ? 'daily_rental' : 'transport_booking' },
-        { key: 'vehicle_name', value: cartItem.taxi.name },
-        { key: 'vehicle_type', value: cartItem.taxi.type || '' },
-        { key: 'is_airport_trip', value: isAirportTrip ? 'yes' : 'no' },
-        { key: 'parking_fee_included', value: parkingFeeVariantId ? 'yes' : 'no' }
+        { key: 'Booking Type', value: isDailyRental ? 'Daily Rental' : 'Transport Booking' },
+        { key: 'Vehicle Name', value: cartItem.taxi.name },
+        { key: 'Vehicle Category', value: cartItem.taxi.type || '' },
+        { key: 'Airport Service', value: isAirportTrip ? 'Yes' : 'No' },
+        { key: 'Parking Fee', value: parkingFeeVariantId ? 'Included' : 'Not Applicable' }
     ];
 
     if (isDailyRental) {
         cartAttributes.push(
-            { key: 'rental_type', value: cartItem.search.rentalType || 'Daily Rental' },
-            { key: 'pickup_location', value: cartItem.search.from },
-            { key: 'pickup_date', value: cartItem.search.pickupDate || cartItem.search.date },
-            { key: 'pickup_time', value: cartItem.search.pickupTime || cartItem.search.time },
-            { key: 'dropoff_date', value: cartItem.search.dropoffDate || '' },
-            { key: 'dropoff_time', value: cartItem.search.dropoffTime || '' },
-            { key: 'rental_hours', value: `${cartItem.search.rentalHours?.toFixed(1) || 0}` },
-            { key: 'number_of_days', value: `${cartItem.search.numberOfDays || 1}` },
-            { key: 'calculated_total', value: `${cartItem.totalPrice}` }
+            { key: 'Rental Type', value: cartItem.search.rentalType || 'Daily Rental' },
+            { key: 'Pickup Location', value: cartItem.search.from },
+            { key: 'Pickup Date', value: formatDateToReadable(cartItem.search.pickupDate || cartItem.search.date) },
+            { key: 'Pickup Time', value: cartItem.search.pickupTime || cartItem.search.time },
+            { key: 'Return Date', value: formatDateToReadable(cartItem.search.dropoffDate || '') },
+            { key: 'Return Time', value: cartItem.search.dropoffTime || '' },
+            { key: 'Total Hours', value: `${cartItem.search.rentalHours?.toFixed(1) || 0} hours` },
+            { key: 'Number of Days', value: `${cartItem.search.numberOfDays || 1} day${(cartItem.search.numberOfDays || 1) > 1 ? 's' : ''}` },
+            { key: 'Total Amount', value: `AED ${cartItem.totalPrice}` }
         );
 
         // Add flight number if provided
         if (cartItem.search.flightNumber) {
-            cartAttributes.push({ key: 'flight_number', value: cartItem.search.flightNumber });
+            cartAttributes.push({ key: 'Flight Number', value: cartItem.search.flightNumber });
         }
     } else {
         cartAttributes.push(
-            { key: 'trip_type', value: isReturn ? 'return' : 'one-way' },
-            { key: 'from_location', value: cartItem.search.from },
-            { key: 'to_location', value: cartItem.search.to },
-            { key: 'outbound_date', value: cartItem.search.date },
-            { key: 'outbound_time', value: cartItem.search.time },
-            { key: 'distance_km', value: `${cartItem.search.distance || 0}` },
-            { key: 'calculated_total', value: `${cartItem.totalPrice}` }
+            { key: 'Trip Type', value: isReturn ? 'Round Trip' : 'One-Way' },
+            { key: 'From', value: cartItem.search.from },
+            { key: 'To', value: cartItem.search.to },
+            { key: 'Departure Date', value: formatDateToReadable(cartItem.search.date) },
+            { key: 'Departure Time', value: cartItem.search.time },
+            { key: 'Distance', value: `${Math.round(cartItem.search.distance || 0)} km` },
+            { key: 'Total Amount', value: `AED ${cartItem.totalPrice}` }
         );
 
         if (isReturn && cartItem.search.returnDate) {
             cartAttributes.push(
-                { key: 'return_date', value: cartItem.search.returnDate },
-                { key: 'return_time', value: cartItem.search.returnTime || '' }
+                { key: 'Return Date', value: formatDateToReadable(cartItem.search.returnDate) },
+                { key: 'Return Time', value: cartItem.search.returnTime || '' }
             );
         }
     }
@@ -275,11 +295,11 @@ Rental Type: ${cartItem.search.rentalType || 'Daily Rental'}
 Pickup Location: ${cartItem.search.from}
 
 PICKUP:
-Date: ${cartItem.search.pickupDate || cartItem.search.date}
+Date: ${formatDateToReadable(cartItem.search.pickupDate || cartItem.search.date)}
 Time: ${cartItem.search.pickupTime || cartItem.search.time}
 
 DROPOFF:
-Date: ${cartItem.search.dropoffDate || ''}
+Date: ${formatDateToReadable(cartItem.search.dropoffDate || '')}
 Time: ${cartItem.search.dropoffTime || ''}
 
 ${cartItem.search.flightNumber ? `Flight Number: ${cartItem.search.flightNumber}\n` : ''}
@@ -298,18 +318,18 @@ ${isAirportTrip ? '🛫 AIRPORT LOCATION' : ''}
 
 From: ${cartItem.search.from}
 To: ${cartItem.search.to}
-Distance: ${cartItem.search.distance || 0} km (each way)
+Distance: ${Math.round(cartItem.search.distance || 0)} km (each way)
 
 OUTBOUND TRIP:
-Date: ${cartItem.search.date}
+Date: ${formatDateToReadable(cartItem.search.date)}
 Time: ${cartItem.search.time}
 
 RETURN TRIP:
-Date: ${cartItem.search.returnDate || 'N/A'}
+Date: ${formatDateToReadable(cartItem.search.returnDate || '')}
 Time: ${cartItem.search.returnTime || 'N/A'}
 
 Fare Calculation:
-Trip Fare (${cartItem.search.distance || 0} km): AED ${cartItem.totalPrice / 2}
+Trip Fare (${Math.round(cartItem.search.distance || 0)} km): AED ${cartItem.totalPrice / 2}
 Quantity: 2 trips (Round Trip)
 Total Fare: AED ${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
 + Airport Parking Fee - ${cartItem.taxi.type} (see line items)` : ''}`;
@@ -320,12 +340,12 @@ ${isAirportTrip ? 'AIRPORT LOCATION' : ''}
 
 From: ${cartItem.search.from}
 To: ${cartItem.search.to}
-Distance: ${cartItem.search.distance || 0} km
-Pickup: ${cartItem.search.date} at ${cartItem.search.time}
+Distance: ${Math.round(cartItem.search.distance || 0)} km
+Pickup: ${formatDateToReadable(cartItem.search.date)} at ${cartItem.search.time}
 
 Fare Calculation:
 Base Fare: AED ${cartItem.taxi.baseFare}
-Distance Charge: ${cartItem.search.distance || 0} km × AED ${cartItem.taxi.perKmRate}/km = AED ${((cartItem.search.distance || 0) * cartItem.taxi.perKmRate).toFixed(2)}
+Distance Charge: ${Math.round(cartItem.search.distance || 0)} km × AED ${cartItem.taxi.perKmRate}/km = AED ${((cartItem.search.distance || 0) * cartItem.taxi.perKmRate).toFixed(2)}
 Total Fare: AED ${cartItem.totalPrice}${isAirportTrip && parkingFeeVariantId ? `
 + Airport Parking Fee - ${cartItem.taxi.type} (see line items)` : ''}`;
     }
