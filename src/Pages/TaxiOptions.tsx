@@ -558,9 +558,9 @@ const TaxiOptions: React.FC = () => {
                                                 <div className="space-y-1.5 text-sm">
                                                     {searchDetails.tripType === 'return' ? (
                                                         <>
-                                                            {/* Outbound */}
+                                                            {/* Pickup */}
                                                             <div className="bg-blue-50 p-2 rounded-lg">
-                                                                <p className="text-xs font-semibold text-blue-700 mb-1">→ Outbound</p>
+                                                                <p className="text-xs font-semibold text-blue-700 mb-1">→ Pickup</p>
                                                                 <div className="text-xs text-gray-700">
                                                                     <div> {formatDateDisplay(searchDetails.date)} at {searchDetails.time}</div>
                                                                     <div className="text-gray-500">{distance.toFixed(1)} km</div>
@@ -604,7 +604,7 @@ const TaxiOptions: React.FC = () => {
                                                     {searchDetails.tripType === 'return' ? (
                                                         <>
                                                             <div className="flex justify-between">
-                                                                <span className="text-gray-600">Outbound Trip ({distance.toFixed(1)} km)</span>
+                                                                <span className="text-gray-600">Pickup Trip ({distance.toFixed(1)} km)</span>
                                                                 <span className="font-semibold text-gray-900">
                                                                     AED {(calculatePrice(selectedTaxiData, distance, 'one-way'))}
                                                                 </span>

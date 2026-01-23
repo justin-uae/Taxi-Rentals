@@ -145,8 +145,8 @@ export const cartItemToLineInput = (cartItem: CartItem): ShopifyCartLineInput =>
             { key: 'To Location', value: cartItem.search.to },
             { key: 'Distance', value: `${Math.round(cartItem.search.distance || 0)} km${isReturn ? ' (each way)' : ''}` },
             { key: 'Duration', value: cartItem.search.duration || '' },
-            { key: 'Outbound Date', value: formatDateToReadable(cartItem.search.date) },
-            { key: 'Outbound Time', value: cartItem.search.time }
+            { key: 'Pickup Date', value: formatDateToReadable(cartItem.search.date) },
+            { key: 'Pickup Time', value: cartItem.search.time }
         );
 
         // Return details (if applicable)
@@ -320,7 +320,7 @@ From: ${cartItem.search.from}
 To: ${cartItem.search.to}
 Distance: ${Math.round(cartItem.search.distance || 0)} km (each way)
 
-OUTBOUND TRIP:
+PICKUP TRIP:
 Date: ${formatDateToReadable(cartItem.search.date)}
 Time: ${cartItem.search.time}
 
