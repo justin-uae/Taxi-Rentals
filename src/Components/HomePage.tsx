@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car, History } from 'lucide-react';
+import { Calendar, MapPin, Navigation, Clock, Users, ArrowRightLeft, Locate, Car, History, User, Mail, Phone, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
 import Banner5 from '../assets/Banner7.png';
 import { formatDate, formatDateWithOrdinal, generateCalendar, generateTimeSlots, isDateWithin12Hours, isPastDate, isTimeAtLeast12HoursFromNow, updateSelectedTimeToValid } from '../utils/common';
 
@@ -20,11 +20,68 @@ interface PlaceDetails {
 type TripType = 'one-way' | 'return';
 type ServiceType = 'transfers' | 'daily-rental';
 
+// Country codes with dial codes
+const countryCodes = [
+    { code: '+971', country: 'UAE', flag: '🇦🇪' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+1', country: 'US', flag: '🇺🇸' },
+    { code: '+91', country: 'India', flag: '🇮🇳' },
+    { code: '+86', country: 'China', flag: '🇨🇳' },
+    { code: '+81', country: 'Japan', flag: '🇯🇵' },
+    { code: '+49', country: 'Germany', flag: '🇩🇪' },
+    { code: '+33', country: 'France', flag: '🇫🇷' },
+    { code: '+39', country: 'Italy', flag: '🇮🇹' },
+    { code: '+34', country: 'Spain', flag: '🇪🇸' },
+    { code: '+7', country: 'Russia', flag: '🇷🇺' },
+    { code: '+61', country: 'Australia', flag: '🇦🇺' },
+    { code: '+55', country: 'Brazil', flag: '🇧🇷' },
+    { code: '+52', country: 'Mexico', flag: '🇲🇽' },
+    { code: '+82', country: 'South Korea', flag: '🇰🇷' },
+    { code: '+966', country: 'Saudi Arabia', flag: '🇸🇦' },
+    { code: '+27', country: 'South Africa', flag: '🇿🇦' },
+    { code: '+90', country: 'Turkey', flag: '🇹🇷' },
+    { code: '+31', country: 'Netherlands', flag: '🇳🇱' },
+    { code: '+46', country: 'Sweden', flag: '🇸🇪' },
+    { code: '+41', country: 'Switzerland', flag: '🇨🇭' },
+    { code: '+32', country: 'Belgium', flag: '🇧🇪' },
+    { code: '+48', country: 'Poland', flag: '🇵🇱' },
+    { code: '+20', country: 'Egypt', flag: '🇪🇬' },
+    { code: '+65', country: 'Singapore', flag: '🇸🇬' },
+    { code: '+60', country: 'Malaysia', flag: '🇲🇾' },
+    { code: '+66', country: 'Thailand', flag: '🇹🇭' },
+    { code: '+84', country: 'Vietnam', flag: '🇻🇳' },
+    { code: '+92', country: 'Pakistan', flag: '🇵🇰' },
+    { code: '+880', country: 'Bangladesh', flag: '🇧🇩' },
+    { code: '+234', country: 'Nigeria', flag: '🇳🇬' },
+    { code: '+254', country: 'Kenya', flag: '🇰🇪' },
+    { code: '+63', country: 'Philippines', flag: '🇵🇭' },
+    { code: '+64', country: 'New Zealand', flag: '🇳🇿' },
+    { code: '+351', country: 'Portugal', flag: '🇵🇹' },
+    { code: '+30', country: 'Greece', flag: '🇬🇷' },
+    { code: '+420', country: 'Czech Republic', flag: '🇨🇿' },
+    { code: '+358', country: 'Finland', flag: '🇫🇮' },
+    { code: '+47', country: 'Norway', flag: '🇳🇴' },
+    { code: '+45', country: 'Denmark', flag: '🇩🇰' },
+    { code: '+353', country: 'Ireland', flag: '🇮🇪' },
+];
+
 const HomePage: React.FC = () => {
     const navigate = useNavigate();
 
+    // Form Step State
+    const [currentStep, setCurrentStep] = useState(1);
+    const totalSteps = 3;
+
     // Service Type State
     const [serviceType, setServiceType] = useState<ServiceType>('transfers');
+
+    // Contact Information States
+    const [contactName, setContactName] = useState('');
+    const [contactEmail, setContactEmail] = useState('');
+    const [contactPhone, setContactPhone] = useState('');
+    const [countryCode, setCountryCode] = useState('+971');
+    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
 
     // Common States
     const [pickupLocation, setPickupLocation] = useState('');
@@ -79,6 +136,7 @@ const HomePage: React.FC = () => {
     // Daily Rental specific States
     const [dropoffDate, setDropoffDate] = useState<Date>(() => {
         const now = new Date();
+        now.setDate(now.getDate() + 1);
         now.setHours(now.getHours() + 12);
         return now;
     });
@@ -92,12 +150,24 @@ const HomePage: React.FC = () => {
     const [showDropoffDatePicker, setShowDropoffDatePicker] = useState(false);
     const [currentDropoffMonth, setCurrentDropoffMonth] = useState(new Date());
 
-    // Refs for Google Places Autocomplete
+    // Refs
     const pickupInputRef = useRef<HTMLInputElement>(null);
     const dropoffInputRef = useRef<HTMLInputElement>(null);
     const pickupAutocompleteRef = useRef<any>(null);
     const dropoffAutocompleteRef = useRef<any>(null);
+    const countryDropdownRef = useRef<HTMLDivElement>(null);
 
+    // Close country dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target as Node)) {
+                setShowCountryDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const formatTime12Hour = (time24: string) => {
         const [hours, minutes] = time24.split(':');
@@ -125,11 +195,9 @@ const HomePage: React.FC = () => {
 
     // Calculate rental days for multi-day rental
     const calculateRentalDays = (pickupDate: Date, dropoffDate: Date) => {
-        // If same day, return 1
         if (pickupDate.toDateString() === dropoffDate.toDateString()) {
             return 1;
         }
-        // Otherwise calculate difference in days
         const diffTime = Math.abs(dropoffDate.getTime() - pickupDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return Math.max(1, diffDays);
@@ -254,7 +322,6 @@ const HomePage: React.FC = () => {
                 return;
             }
 
-            // Clear existing autocomplete instances when switching service types
             if (pickupAutocompleteRef.current && pickupInputRef.current) {
                 window.google.maps.event.clearInstanceListeners(pickupInputRef.current);
                 pickupAutocompleteRef.current = null;
@@ -265,7 +332,6 @@ const HomePage: React.FC = () => {
                 dropoffAutocompleteRef.current = null;
             }
 
-            // Initialize pickup autocomplete (always needed)
             if (pickupInputRef.current) {
                 pickupAutocompleteRef.current = new window.google.maps.places.Autocomplete(
                     pickupInputRef.current,
@@ -288,7 +354,6 @@ const HomePage: React.FC = () => {
                 });
             }
 
-            // Initialize dropoff autocomplete (only for transfers)
             if (serviceType === 'transfers' && dropoffInputRef.current) {
                 dropoffAutocompleteRef.current = new window.google.maps.places.Autocomplete(
                     dropoffInputRef.current,
@@ -315,7 +380,6 @@ const HomePage: React.FC = () => {
         loadGoogleMapsScript();
     }, [serviceType]);
 
-    // Calculate distance when both locations are selected (transfers only)
     useEffect(() => {
         if (serviceType === 'transfers' && pickupDetails && dropoffDetails && window.google) {
             calculateDistance();
@@ -356,17 +420,12 @@ const HomePage: React.FC = () => {
         );
     };
 
-    // Handle date change with 12-hour validation
     const handleDateClick = (date: Date) => {
-        // Update the date
         setSelectedDate(date);
-
-        // Update time to ensure it's valid
         const updated = updateSelectedTimeToValid(date, selectedTime);
         setSelectedDate(updated.date);
         setSelectedTime(updated.time);
 
-        // If it's daily rental, also update dropoff date if it's before the new pickup date
         if (serviceType === 'daily-rental') {
             if (dropoffDate < updated.date) {
                 setDropoffDate(new Date(updated.date));
@@ -376,7 +435,6 @@ const HomePage: React.FC = () => {
             }
         }
 
-        // If it's transfers with return trip, update return date if it's before the new departure date
         if (serviceType === 'transfers' && tripType === 'return') {
             if (returnDate < updated.date) {
                 const tomorrow = new Date(updated.date);
@@ -393,29 +451,21 @@ const HomePage: React.FC = () => {
 
     const handleReturnDateClick = (date: Date) => {
         setReturnDate(date);
-
-        // Update return time to ensure it's valid
         const updated = updateSelectedTimeToValid(date, returnTime);
         setReturnDate(updated.date);
         setReturnTime(updated.time);
-
         setShowReturnDatePicker(false);
     };
 
     const handleDropoffDateClick = (date: Date) => {
         setDropoffDate(date);
-
-        // Update dropoff time to ensure it's valid
         const updated = updateSelectedTimeToValid(date, dropoffTime);
         setDropoffDate(updated.date);
         setDropoffTime(updated.time);
-
         setShowDropoffDatePicker(false);
     };
 
-    // Handle time change with validation
     const handlePickupTimeChange = (time: string) => {
-        // Check if the selected time is at least 12 hours from now
         if (!isTimeAtLeast12HoursFromNow(selectedDate, time)) {
             alert('Please select a time at least 12 hours from now');
             return;
@@ -424,7 +474,6 @@ const HomePage: React.FC = () => {
     };
 
     const handleReturnTimeChange = (time: string) => {
-        // Check if the selected time is at least 12 hours from now
         if (!isTimeAtLeast12HoursFromNow(returnDate, time)) {
             alert('Please select a time at least 12 hours from now');
             return;
@@ -433,7 +482,6 @@ const HomePage: React.FC = () => {
     };
 
     const handleDropoffTimeChange = (time: string) => {
-        // Check if the selected time is at least 12 hours from now
         if (!isTimeAtLeast12HoursFromNow(dropoffDate, time)) {
             alert('Please select a time at least 12 hours from now');
             return;
@@ -441,17 +489,65 @@ const HomePage: React.FC = () => {
         setDropoffTime(time);
     };
 
-    const handleSearch = (e: React.FormEvent) => {
+    const sendEnquiryEmail = async () => {
+        setIsSendingEmail(true);
+
+        const enquiryData = {
+            name: contactName,
+            email: contactEmail,
+            phone: `${countryCode}${contactPhone}`,
+            serviceType: serviceType,
+            pickupLocation: pickupLocation,
+            dropoffLocation: serviceType === 'transfers' ? dropoffLocation : null,
+            pickupDate: formatDate(selectedDate),
+            pickupTime: formatTime12Hour(selectedTime),
+            numberOfPersons: numberOfPersons,
+            tripType: serviceType === 'transfers' ? tripType : null,
+            distance: distance,
+            duration: duration,
+            dropoffDate: serviceType === 'daily-rental' ? formatDate(dropoffDate) : null,
+            dropoffTime: serviceType === 'daily-rental' ? formatTime12Hour(dropoffTime) : null,
+            returnDate: (serviceType === 'transfers' && tripType === 'return') ? formatDate(returnDate) : null,
+            returnTime: (serviceType === 'transfers' && tripType === 'return') ? formatTime12Hour(returnTime) : null,
+            rentalHours: serviceType === 'daily-rental' ? currentRentalHours : null
+        };
+
+        try {
+            const appURL = import.meta.env.VITE_APP_URL;
+
+            const response = await fetch(`${appURL}/api/enquiry.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(enquiryData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                console.log('Email sent successfully');
+            } else {
+                console.error('Failed to send email:', result.message);
+            }
+        } catch (error) {
+            console.error('Error sending email:', error);
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
+
+    const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate pickup time is at least 12 hours from now
-        // if (!isTimeAtLeast12HoursFromNow(selectedDate, selectedTime)) {
-        //     alert('Pickup time must be at least 12 hours from now');
-        //     return;
-        // }
+        if (!contactName || !contactEmail || !contactPhone) {
+            alert('Please fill in all contact details');
+            return;
+        }
+
+        await sendEnquiryEmail();
 
         if (serviceType === 'transfers') {
-            // Validate return time for return trips
             if (tripType === 'return' && !isTimeAtLeast12HoursFromNow(returnDate, returnTime)) {
                 alert('Return time must be at least 12 hours from now');
                 return;
@@ -476,23 +572,18 @@ const HomePage: React.FC = () => {
                     time: formatTime12Hour(selectedTime),
                     returnDate: tripType === 'return' ? formatDate(returnDate) : null,
                     returnTime: tripType === 'return' ? formatTime12Hour(returnTime) : null,
-                    passengers: numberOfPersons
+                    passengers: numberOfPersons,
+                    contactName: contactName,
+                    contactEmail: contactEmail,
+                    contactPhone: `${countryCode}${contactPhone}`
                 }
             });
         } else {
-            // Daily Rental
-            // Validate dropoff time is at least 12 hours from now
-            // if (!isTimeAtLeast12HoursFromNow(dropoffDate, dropoffTime)) {
-            //     alert('Dropoff time must be at least 12 hours from now');
-            //     return;
-            // }
-
             if (!pickupLocation) {
                 alert('Please select a pickup location');
                 return;
             }
 
-            // Validate that dropoff is after pickup
             const rentalHours = calculateRentalHours(selectedDate, selectedTime, dropoffDate, dropoffTime);
 
             if (rentalHours <= 0) {
@@ -513,12 +604,14 @@ const HomePage: React.FC = () => {
                     dropoffTime: formatTime12Hour(dropoffTime),
                     rentalHours: rentalHours,
                     rentalDays: rentalDays,
-                    passengers: numberOfPersons
+                    passengers: numberOfPersons,
+                    contactName: contactName,
+                    contactEmail: contactEmail,
+                    contactPhone: `${countryCode}${contactPhone}`
                 }
             });
         }
     };
-
 
     const isDateSelected = (date: Date, type: 'departure' | 'return' | 'dropoff') => {
         if (!date) return false;
@@ -550,19 +643,43 @@ const HomePage: React.FC = () => {
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"];
 
-    // Calculate estimated rental info for daily rental
     const currentRentalHours = serviceType === 'daily-rental'
         ? calculateRentalHours(selectedDate, selectedTime, dropoffDate, dropoffTime)
         : 0;
 
-    // Get time slots for current selection
     const pickupTimeSlots = generateTimeSlots(selectedDate);
-    const returnTimeSlots = generateTimeSlots(returnDate, true);
+    const returnTimeSlots = generateTimeSlots(returnDate);
     const dropoffTimeSlots = generateTimeSlots(dropoffDate);
+
+    // Step validation functions
+    const canProceedToStep2 = () => {
+        if (serviceType === 'transfers') {
+            return pickupLocation && dropoffLocation;
+        } else {
+            return pickupLocation;
+        }
+    };
+
+    const handleNextStep = () => {
+        if (currentStep === 1 && !canProceedToStep2()) {
+            alert(serviceType === 'transfers'
+                ? 'Please enter both pickup and destination locations'
+                : 'Please enter pickup location');
+            return;
+        }
+        if (currentStep < totalSteps) {
+            setCurrentStep(currentStep + 1);
+        }
+    };
+
+    const handlePrevStep = () => {
+        if (currentStep > 1) {
+            setCurrentStep(currentStep - 1);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Banner Section with Background Image */}
             <div
                 className="relative min-h-screen bg-cover bg-center bg-no-repeat mt-16"
                 style={{
@@ -575,38 +692,44 @@ const HomePage: React.FC = () => {
                     <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start min-h-screen py-8 lg:py-12">
                         {/* Left Column - Booking Form */}
                         <div className="w-full mx-auto order-2 lg:order-1">
-                            <div className="bg-white/95 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl shadow-black/10 border border-white/30 max-w-lg lg:mx-0 mx-auto">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 shadow-2xl shadow-black/10 border border-white/30 max-w-lg lg:mx-0 mx-auto">
                                 {/* Service Type Selector */}
-                                <div className="mb-4 sm:mb-6">
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                <div className="mb-3 sm:mb-4">
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
                                         <button
                                             type="button"
-                                            onClick={() => setServiceType('transfers')}
-                                            className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${serviceType === 'transfers'
+                                            onClick={() => {
+                                                setServiceType('transfers');
+                                                setCurrentStep(1);
+                                            }}
+                                            className={`py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg border-2 font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${serviceType === 'transfers'
                                                 ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-500 text-white shadow-lg'
                                                 : 'bg-white border-gray-200 text-gray-600 hover:border-orange-300'
                                                 }`}
                                         >
-                                            <Car className="h-4 w-4" />
+                                            <Car className="h-3 w-3 sm:h-4 sm:w-4" />
                                             Transfers
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setServiceType('daily-rental')}
-                                            className={`py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${serviceType === 'daily-rental'
+                                            onClick={() => {
+                                                setServiceType('daily-rental');
+                                                setCurrentStep(1);
+                                            }}
+                                            className={`py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg border-2 font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${serviceType === 'daily-rental'
                                                 ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-orange-500 text-white shadow-lg'
                                                 : 'bg-white border-gray-200 text-gray-600 hover:border-orange-300'
                                                 }`}
                                         >
-                                            <History className="h-4 w-4" />
+                                            <History className="h-3 w-3 sm:h-4 sm:w-4" />
                                             Daily Bookings
                                         </button>
                                     </div>
 
-                                    <h2 className="text-lg sm:text-xl font-bold text-orange-600 mb-2">
+                                    <h2 className="text-sm sm:text-base lg:text-lg font-bold text-orange-600 mb-1">
                                         {serviceType === 'transfers' ? 'Reserve Your Ride Now' : 'Reserve a Car for the Day'}
                                     </h2>
-                                    <p className="text-sm sm:text-base text-gray-600">
+                                    <p className="text-xs sm:text-sm text-gray-600">
                                         {serviceType === 'transfers'
                                             ? 'Experience luxury travel with professional drivers'
                                             : 'Choose from our premium fleet with driver included'
@@ -614,883 +737,770 @@ const HomePage: React.FC = () => {
                                     </p>
                                 </div>
 
-                                <form onSubmit={handleSearch} className="space-y-3 sm:space-y-4">
-                                    {/* Transfers Form */}
-                                    {serviceType === 'transfers' && (
-                                        <>
-                                            {/* Trip Type Selection */}
-                                            <div className="group">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-lg border border-indigo-200">
-                                                            <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
-                                                        </div>
-                                                        Trip Type
-                                                    </label>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleTripTypeChange('one-way')}
-                                                        className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl border-2 font-medium text-sm transition-all duration-200 ${tripType === 'one-way'
-                                                            ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
-                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                                                            }`}
-                                                    >
-                                                        One Way
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleTripTypeChange('return')}
-                                                        className={`py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl border-2 font-medium text-sm transition-all duration-200 ${tripType === 'return'
-                                                            ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
-                                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                                                            }`}
-                                                    >
-                                                        Return
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Pickup Location */}
-                                            <div className="group">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg border border-orange-200">
-                                                            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                                                        </div>
-                                                        Pickup Location
-                                                    </label>
-                                                </div>
-                                                <div className="relative">
-                                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                        <input
-                                                            ref={pickupInputRef}
-                                                            type="text"
-                                                            placeholder="Enter pickup location"
-                                                            value={pickupLocation}
-                                                            onChange={(e) => setPickupLocation(e.target.value)}
-                                                            required
-                                                            className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
-                                                        />
-                                                        <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => getCurrentLocation('pickup')}
-                                                            disabled={isGettingCurrentLocation.pickup}
-                                                            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            title="Use current location"
-                                                        >
-                                                            {isGettingCurrentLocation.pickup ? (
-                                                                <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-orange-600"></div>
-                                                            ) : (
-                                                                <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-orange-500" />
-                                                            )}
-                                                        </button>
+                                {/* Progress Steps */}
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        {[1, 2, 3].map((step) => (
+                                            <React.Fragment key={step}>
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all duration-300 ${currentStep >= step
+                                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
+                                                        : 'bg-gray-200 text-gray-500'
+                                                        }`}>
+                                                        {step}
                                                     </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Dropoff Location */}
-                                            <div className="group">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
-                                                            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                                                        </div>
-                                                        Destination
-                                                    </label>
-                                                </div>
-                                                <div className="relative">
-                                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                        <input
-                                                            ref={dropoffInputRef}
-                                                            type="text"
-                                                            placeholder="Enter destination"
-                                                            value={dropoffLocation}
-                                                            onChange={(e) => setDropoffLocation(e.target.value)}
-                                                            required
-                                                            className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
-                                                        />
-                                                        <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => getCurrentLocation('dropoff')}
-                                                            disabled={isGettingCurrentLocation.dropoff}
-                                                            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            title="Use current location"
-                                                        >
-                                                            {isGettingCurrentLocation.dropoff ? (
-                                                                <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
-                                                            ) : (
-                                                                <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-blue-500" />
-                                                            )}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Distance Display */}
-                                            {distance !== null && (
-                                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border-2 border-green-200 animate-fadeIn">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2 sm:gap-3">
-                                                            <div className="p-1.5 sm:p-2 bg-white rounded-lg shadow-sm">
-                                                                <Navigation className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[10px] sm:text-xs text-green-600 font-semibold uppercase tracking-wide">Route Distance</p>
-                                                                <p className="text-lg sm:text-2xl font-bold text-gray-900">{distance.toFixed(1)} km</p>
-                                                            </div>
-                                                        </div>
-                                                        {duration && (
-                                                            <div className="text-right">
-                                                                <p className="text-[10px] sm:text-xs text-green-600 font-semibold uppercase tracking-wide">Est. Time</p>
-                                                                <p className="text-base sm:text-lg font-bold text-gray-900">{duration}</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Calculating Indicator */}
-                                            {isCalculating && (
-                                                <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 border-2 border-gray-200">
-                                                    <div className="flex items-center gap-2 sm:gap-3">
-                                                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-orange-600"></div>
-                                                        <p className="text-xs sm:text-sm text-gray-600 font-medium">Calculating distance...</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {/* Daily Rental Form */}
-                                    {serviceType === 'daily-rental' && (
-                                        <>
-                                            {/* Pickup Location */}
-                                            <div className="group">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-lg border border-orange-200">
-                                                            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-                                                        </div>
-                                                        Pickup Location
-                                                    </label>
-                                                </div>
-                                                <div className="relative">
-                                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                        <input
-                                                            ref={pickupInputRef}
-                                                            type="text"
-                                                            placeholder="Enter pickup location"
-                                                            value={pickupLocation}
-                                                            onChange={(e) => setPickupLocation(e.target.value)}
-                                                            required
-                                                            className="relative w-full py-3 sm:py-4 pl-10 sm:pl-12 pr-10 sm:pr-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 text-sm sm:text-base text-gray-700 placeholder-gray-400 transition-all duration-200"
-                                                        />
-                                                        <MapPin className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => getCurrentLocation('pickup')}
-                                                            disabled={isGettingCurrentLocation.pickup}
-                                                            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            title="Use current location"
-                                                        >
-                                                            {isGettingCurrentLocation.pickup ? (
-                                                                <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-orange-600"></div>
-                                                            ) : (
-                                                                <Locate className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-500 hover:text-orange-500" />
-                                                            )}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Rental Duration Info Banner */}
-                                            {currentRentalHours > 0 && (
-                                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-3 sm:p-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-1">Rental Duration</p>
-                                                            <p className="text-lg sm:text-xl font-bold text-gray-900">
-                                                                {currentRentalHours.toFixed(1)} hours
-                                                            </p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-1">Type</p>
-                                                            <p className="text-sm font-bold text-blue-700">
-                                                                {currentRentalHours <= 5
-                                                                    ? 'Half Day'
-                                                                    : currentRentalHours < 24
-                                                                        ? 'Full Day'
-                                                                        : `${Math.ceil(currentRentalHours / 24)} Days`
-                                                                }
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {/* Pickup Date and Time Row - Common for both */}
-                                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                        {/* Pickup Date Selection */}
-                                        <div className="group relative">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                    <div className="p-1 sm:p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
-                                                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
-                                                    </div>
-                                                    <span className="hidden sm:inline">Pickup Date</span>
-                                                    <span className="sm:hidden">Pickup</span>
-                                                </label>
-                                                {isDateWithin12Hours(selectedDate) && (
-                                                    <span className="text-xs text-red-600 font-medium">
-                                                        *12h
+                                                    <span className={`text-[10px] sm:text-xs mt-1 font-medium ${currentStep >= step ? 'text-orange-600' : 'text-gray-400'}`}>
+                                                        {step === 1 ? 'Location' : step === 2 ? 'Date & Time' : 'Contact'}
                                                     </span>
+                                                </div>
+                                                {step < 3 && (
+                                                    <div className={`h-0.5 sm:h-1 flex-1 mx-1 sm:mx-2 rounded transition-all duration-300 ${currentStep > step ? 'bg-orange-500' : 'bg-gray-200'}`} />
                                                 )}
-                                            </div>
-                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowDatePicker(!showDatePicker)}
-                                                    className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
-                                                >
-                                                    <div className="text-gray-700 font-medium text-xs sm:text-sm">
-                                                        {formatDateWithOrdinal(selectedDate)}
-                                                    </div>
-                                                </button>
-                                            </div>
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                </div>
 
-                                            {/* Date Picker Dropdown */}
-                                            {showDatePicker && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 z-50 animate-slideDown min-w-[280px] sm:min-w-[300px]">
-                                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
-                                                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                        >
-                                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                            </svg>
-                                                        </button>
-
-                                                        <div className="text-center">
-                                                            <h3 className="text-lg font-bold text-gray-900">
-                                                                {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                                                            </h3>
+                                <form onSubmit={handleSearch} className="space-y-2 sm:space-y-3">
+                                    {/* STEP 1: Location Details */}
+                                    {currentStep === 1 && (
+                                        <div className="space-y-2 sm:space-y-3 animate-fadeIn">
+                                            {serviceType === 'transfers' && (
+                                                <>
+                                                    {/* Trip Type Selection */}
+                                                    <div className="group">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                <div className="p-0.5 sm:p-1 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-md border border-indigo-200">
+                                                                    <ArrowRightLeft className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-indigo-600" />
+                                                                </div>
+                                                                Trip Type
+                                                            </label>
                                                         </div>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
-                                                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                        >
-                                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                            </svg>
-                                                        </button>
+                                                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleTripTypeChange('one-way')}
+                                                                className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg border-2 font-medium text-xs sm:text-sm transition-all duration-200 ${tripType === 'one-way'
+                                                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
+                                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                                    }`}
+                                                            >
+                                                                One Way
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleTripTypeChange('return')}
+                                                                className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg border-2 font-medium text-xs sm:text-sm transition-all duration-200 ${tripType === 'return'
+                                                                    ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-500 text-indigo-700 shadow-sm'
+                                                                    : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                                                                    }`}
+                                                            >
+                                                                Return
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="grid grid-cols-7 gap-2 mb-2">
-                                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                            <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
-                                                                {day}
-                                                            </div>
-                                                        ))}
-                                                    </div>
 
-                                                    <div className="grid grid-cols-7 gap-2">
-                                                        {departureCalendarDays.map((date, index) => {
-                                                            if (!date) {
-                                                                return <div key={`empty-${index}`} className="aspect-square" />;
-                                                            }
-
-                                                            const isToday = date.toDateString() === new Date().toDateString();
-                                                            const isPast = isPastDate(date);
-                                                            const isWithin12Hours = isDateWithin12Hours(date);
-                                                            const isSelected = isDateSelected(date, 'departure');
-
-                                                            return (
+                                                    {/* Pickup Location */}
+                                                    <div className="group">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                <div className="p-0.5 sm:p-1 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-md border border-orange-200">
+                                                                    <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-orange-600" />
+                                                                </div>
+                                                                Pickup Location
+                                                            </label>
+                                                        </div>
+                                                        <div className="relative">
+                                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                                <input
+                                                                    ref={pickupInputRef}
+                                                                    type="text"
+                                                                    placeholder="Enter pickup location"
+                                                                    value={pickupLocation}
+                                                                    onChange={(e) => setPickupLocation(e.target.value)}
+                                                                    required
+                                                                    className="relative w-full py-2 sm:py-2.5 pl-8 sm:pl-9 pr-8 sm:pr-9 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-xs sm:text-sm text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                                                />
+                                                                <MapPin className="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
                                                                 <button
-                                                                    key={index}
                                                                     type="button"
-                                                                    onClick={() => !isPast && !isWithin12Hours && handleDateClick(date)}
-                                                                    disabled={isPast || isWithin12Hours}
-                                                                    className={`
-                                                                aspect-square rounded-lg text-sm font-medium transition-all duration-200
-                                                                ${isPast || isWithin12Hours
-                                                                            ? 'text-gray-300 cursor-not-allowed'
-                                                                            : 'hover:bg-purple-50 cursor-pointer'
-                                                                        }
-                                                                ${isSelected
-                                                                            ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
-                                                                            : 'text-gray-700'
-                                                                        }
-                                                                ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
-                                                            `}
-                                                                    title={isWithin12Hours ? 'Must be at least 12 hours from now' : ''}
+                                                                    onClick={() => getCurrentLocation('pickup')}
+                                                                    disabled={isGettingCurrentLocation.pickup}
+                                                                    className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    title="Use current location"
                                                                 >
-                                                                    {date.getDate()}
+                                                                    {isGettingCurrentLocation.pickup ? (
+                                                                        <div className="animate-spin rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 border-b-2 border-orange-600"></div>
+                                                                    ) : (
+                                                                        <Locate className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 hover:text-orange-500" />
+                                                                    )}
                                                                 </button>
-                                                            );
-                                                        })}
+                                                            </div>
+                                                        </div>
                                                     </div>
 
-                                                    <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                                                    {/* Dropoff Location */}
+                                                    <div className="group">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                <div className="p-0.5 sm:p-1 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-md border border-blue-200">
+                                                                    <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-600" />
+                                                                </div>
+                                                                Destination
+                                                            </label>
+                                                        </div>
+                                                        <div className="relative">
+                                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                                <input
+                                                                    ref={dropoffInputRef}
+                                                                    type="text"
+                                                                    placeholder="Enter destination"
+                                                                    value={dropoffLocation}
+                                                                    onChange={(e) => setDropoffLocation(e.target.value)}
+                                                                    required
+                                                                    className="relative w-full py-2 sm:py-2.5 pl-8 sm:pl-9 pr-8 sm:pr-9 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                                                />
+                                                                <MapPin className="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => getCurrentLocation('dropoff')}
+                                                                    disabled={isGettingCurrentLocation.dropoff}
+                                                                    className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    title="Use current location"
+                                                                >
+                                                                    {isGettingCurrentLocation.dropoff ? (
+                                                                        <div className="animate-spin rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 border-b-2 border-blue-600"></div>
+                                                                    ) : (
+                                                                        <Locate className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 hover:text-blue-500" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Distance Display */}
+                                                    {distance !== null && (
+                                                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2 sm:p-3 border-2 border-green-200 animate-fadeIn">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                                                    <div className="p-1 sm:p-1.5 bg-white rounded-md shadow-sm">
+                                                                        <Navigation className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[9px] sm:text-[10px] text-green-600 font-semibold uppercase tracking-wide">Route Distance</p>
+                                                                        <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900">{distance.toFixed(1)} km</p>
+                                                                    </div>
+                                                                </div>
+                                                                {duration && (
+                                                                    <div className="text-right">
+                                                                        <p className="text-[9px] sm:text-[10px] text-green-600 font-semibold uppercase tracking-wide">Est. Time</p>
+                                                                        <p className="text-xs sm:text-sm lg:text-base font-bold text-gray-900">{duration}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {isCalculating && (
+                                                        <div className="bg-gray-50 rounded-lg p-2 sm:p-3 border-2 border-gray-200">
+                                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                                                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-orange-600"></div>
+                                                                <p className="text-[10px] sm:text-xs text-gray-600 font-medium">Calculating distance...</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* Daily Rental Pickup */}
+                                            {serviceType === 'daily-rental' && (
+                                                <div className="group">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                            <div className="p-0.5 sm:p-1 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-md border border-orange-200">
+                                                                <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-orange-600" />
+                                                            </div>
+                                                            Pickup Location
+                                                        </label>
+                                                    </div>
+                                                    <div className="relative">
+                                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                            <input
+                                                                ref={pickupInputRef}
+                                                                type="text"
+                                                                placeholder="Enter pickup location"
+                                                                value={pickupLocation}
+                                                                onChange={(e) => setPickupLocation(e.target.value)}
+                                                                required
+                                                                className="relative w-full py-2 sm:py-2.5 pl-8 sm:pl-9 pr-8 sm:pr-9 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-xs sm:text-sm text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                                            />
+                                                            <MapPin className="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 group-hover:text-orange-500 transition-colors duration-200" />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => getCurrentLocation('pickup')}
+                                                                disabled={isGettingCurrentLocation.pickup}
+                                                                className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-1 sm:p-1.5 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title="Use current location"
+                                                            >
+                                                                {isGettingCurrentLocation.pickup ? (
+                                                                    <div className="animate-spin rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 border-b-2 border-orange-600"></div>
+                                                                ) : (
+                                                                    <Locate className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500 hover:text-orange-500" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* STEP 2: Date & Time + Passengers */}
+                                    {currentStep === 2 && (
+                                        <div className="space-y-2 sm:space-y-3 animate-fadeIn max-h-[450px] sm:max-h-[500px] overflow-y-auto pr-1 sm:pr-2 
+        [&::-webkit-scrollbar]:w-1.5
+        [&::-webkit-scrollbar-track]:bg-gray-100
+        [&::-webkit-scrollbar-track]:rounded-full
+        [&::-webkit-scrollbar-thumb]:bg-orange-300
+        [&::-webkit-scrollbar-thumb]:rounded-full
+        [&::-webkit-scrollbar-thumb]:hover:bg-orange-400">
+
+                                            {/* Pickup Date and Time Row */}
+                                            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                                                {/* Pickup Date Selection */}
+                                                <div className="group relative">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                            <div className="p-0.5 sm:p-1 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-md border border-purple-200">
+                                                                <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-purple-600" />
+                                                            </div>
+                                                            <span className="hidden sm:inline">Pickup Date</span>
+                                                            <span className="sm:hidden">Pickup</span>
+                                                        </label>
+                                                        {isDateWithin12Hours(selectedDate) && (
+                                                            <span className="text-[9px] sm:text-[10px] text-red-600 font-medium">*12h</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
                                                         <button
                                                             type="button"
-                                                            onClick={() => {
-                                                                const tomorrow = new Date();
-                                                                tomorrow.setDate(tomorrow.getDate() + 1);
-                                                                handleDateClick(tomorrow);
+                                                            onClick={() => setShowDatePicker(!showDatePicker)}
+                                                            className="relative w-full py-2 sm:py-2.5 px-2 sm:px-3 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
+                                                        >
+                                                            <div className="text-gray-700 font-medium text-[10px] sm:text-xs">
+                                                                {formatDateWithOrdinal(selectedDate)}
+                                                            </div>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Date Picker Dropdown */}
+                                                    {showDatePicker && (
+                                                        <div className="absolute top-full left-0 right-0 mt-1 sm:mt-2 bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-gray-200 p-3 sm:p-4 z-50 animate-slideDown min-w-[240px] sm:min-w-[280px]">
+                                                            <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                                                                <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                                    </svg>
+                                                                </button>
+                                                                <div className="text-center">
+                                                                    <h3 className="text-sm sm:text-base font-bold text-gray-900">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</h3>
+                                                                </div>
+                                                                <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                            <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                                                                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                                    <div key={day} className="text-center text-[10px] sm:text-xs font-semibold text-gray-500 py-1.5">{day}</div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="grid grid-cols-7 gap-1.5">
+                                                                {departureCalendarDays.map((date, index) => {
+                                                                    if (!date) return <div key={`empty-${index}`} className="aspect-square" />;
+                                                                    const isToday = date.toDateString() === new Date().toDateString();
+                                                                    const isPast = isPastDate(date);
+                                                                    const isWithin12Hours = isDateWithin12Hours(date);
+                                                                    const isSelected = isDateSelected(date, 'departure');
+                                                                    return (
+                                                                        <button key={index} type="button" onClick={() => !isPast && !isWithin12Hours && handleDateClick(date)} disabled={isPast || isWithin12Hours}
+                                                                            className={`aspect-square rounded-md text-[11px] sm:text-xs font-medium transition-all duration-200 ${isPast || isWithin12Hours ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}`}
+                                                                            title={isWithin12Hours ? 'Must be at least 12 hours from now' : ''}>
+                                                                            {date.getDate()}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+                                                                <button type="button" onClick={() => { const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); handleDateClick(tomorrow); }} className="text-[11px] sm:text-xs text-purple-600 hover:text-purple-700 font-semibold">Tomorrow</button>
+                                                                <button type="button" onClick={() => setShowDatePicker(false)} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-[11px] sm:text-xs font-semibold">Done</button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Pickup Time */}
+                                                <div className="group">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                            <div className="p-0.5 sm:p-1 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-md border border-blue-200">
+                                                                <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-600" />
+                                                            </div>
+                                                            <span className="hidden sm:inline">Pickup Time</span>
+                                                            <span className="sm:hidden">Time</span>
+                                                        </label>
+                                                    </div>
+                                                    <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                        <select value={selectedTime} onChange={(e) => handlePickupTimeChange(e.target.value)} className="relative w-full py-2 sm:py-2.5 px-2 sm:px-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-gray-700 text-[10px] sm:text-xs transition-all duration-200 appearance-none cursor-pointer font-medium">
+                                                            {pickupTimeSlots.length > 0 ? pickupTimeSlots.map((time) => (<option key={time} value={time}>{formatTime12Hour(time)}</option>)) : (<option value="">No available times</option>)}
+                                                        </select>
+                                                        <div className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                            <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                    {pickupTimeSlots.length === 0 && (
+                                                        <p className="text-[9px] sm:text-[10px] text-red-600 mt-1">No available times for today. Please select a future date.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Daily Rental: Dropoff Date/Time */}
+                                            {serviceType === 'daily-rental' && (
+                                                <>
+                                                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                                                        {/* Dropoff Date */}
+                                                        <div className="group relative">
+                                                            <div className="flex items-center justify-between mb-1.5">
+                                                                <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                    <div className="p-0.5 sm:p-1 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-md border border-green-200">
+                                                                        <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
+                                                                    </div>
+                                                                    <span className="hidden sm:inline">Dropoff Date</span>
+                                                                    <span className="sm:hidden">Dropoff</span>
+                                                                </label>
+                                                                {isDateWithin12Hours(dropoffDate) && (
+                                                                    <span className="text-[9px] sm:text-[10px] text-red-600 font-medium">*12h</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowDropoffDatePicker(!showDropoffDatePicker)}
+                                                                    className="relative w-full py-2 sm:py-2.5 px-2 sm:px-3 bg-white border-2 border-gray-200 rounded-lg hover:border-green-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-200 cursor-pointer text-left"
+                                                                >
+                                                                    <div className="text-gray-700 font-medium text-[10px] sm:text-xs">
+                                                                        {formatDateWithOrdinal(dropoffDate)}
+                                                                    </div>
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Dropoff Date Picker */}
+                                                            {showDropoffDatePicker && (
+                                                                <div className="absolute top-full left-0 right-0 mt-1 sm:mt-2 bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-gray-200 p-3 sm:p-4 z-50 animate-slideDown min-w-[240px] sm:min-w-[280px]">
+                                                                    <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                                                                        <button type="button" onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                                                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                                            </svg>
+                                                                        </button>
+                                                                        <div className="text-center">
+                                                                            <h3 className="text-sm sm:text-base font-bold text-gray-900">{monthNames[currentDropoffMonth.getMonth()]} {currentDropoffMonth.getFullYear()}</h3>
+                                                                        </div>
+                                                                        <button type="button" onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                                                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                                                                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                                            <div key={day} className="text-center text-[10px] sm:text-xs font-semibold text-gray-500 py-1.5">{day}</div>
+                                                                        ))}
+                                                                    </div>
+                                                                    <div className="grid grid-cols-7 gap-1.5">
+                                                                        {dropoffCalendarDays.map((date, index) => {
+                                                                            if (!date) return <div key={`empty-${index}`} className="aspect-square" />;
+                                                                            const isToday = date.toDateString() === new Date().toDateString();
+                                                                            const isPast = isPastDate(date);
+                                                                            const isWithin12Hours = isDateWithin12Hours(date);
+                                                                            const isBefore = isBeforeDeparture(date);
+                                                                            const isSelected = isDateSelected(date, 'dropoff');
+                                                                            return (
+                                                                                <button key={index} type="button" onClick={() => !isPast && !isWithin12Hours && !isBefore && handleDropoffDateClick(date)} disabled={isPast || isWithin12Hours || isBefore}
+                                                                                    className={`aspect-square rounded-md text-[11px] sm:text-xs font-medium transition-all duration-200 ${isPast || isWithin12Hours || isBefore ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-green-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-green-500' : ''}`}
+                                                                                    title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after pickup date' : ''}>
+                                                                                    {date.getDate()}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+                                                                        <button type="button" onClick={() => { const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1); handleDropoffDateClick(nextDay); }} className="text-[11px] sm:text-xs text-green-600 hover:text-green-700 font-semibold">Next Day</button>
+                                                                        <button type="button" onClick={() => setShowDropoffDatePicker(false)} className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-[11px] sm:text-xs font-semibold">Done</button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Dropoff Time */}
+                                                        <div className="group">
+                                                            <div className="flex items-center justify-between mb-1.5">
+                                                                <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                    <div className="p-0.5 sm:p-1 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-md border border-green-200">
+                                                                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
+                                                                    </div>
+                                                                    <span className="hidden sm:inline">Dropoff Time</span>
+                                                                    <span className="sm:hidden">Time</span>
+                                                                </label>
+                                                            </div>
+                                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                                <select value={dropoffTime} onChange={(e) => handleDropoffTimeChange(e.target.value)} className="relative w-full py-2 sm:py-2.5 px-2 sm:px-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 text-gray-700 text-[10px] sm:text-xs transition-all duration-200 appearance-none cursor-pointer font-medium">
+                                                                    {dropoffTimeSlots.length > 0 ? dropoffTimeSlots.map((time) => (<option key={time} value={time}>{formatTime12Hour(time)}</option>)) : (<option value="">No available times</option>)}
+                                                                </select>
+                                                                <div className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                                    </svg>
+                                                                </div>
+                                                            </div>
+                                                            {dropoffTimeSlots.length === 0 && (
+                                                                <p className="text-[9px] sm:text-[10px] text-red-600 mt-1">No available times for today. Please select a future date.</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {currentRentalHours > 0 && (
+                                                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-2 sm:p-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="text-[9px] sm:text-[10px] text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Rental Duration</p>
+                                                                    <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900">{currentRentalHours.toFixed(1)} hours</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="text-[9px] sm:text-[10px] text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Type</p>
+                                                                    <p className="text-xs sm:text-sm font-bold text-blue-700">
+                                                                        {currentRentalHours <= 5 ? 'Half Day' : currentRentalHours < 24 ? 'Full Day' : `${Math.ceil(currentRentalHours / 24)} Days`}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* Transfers: Return Date/Time for return trips */}
+                                            {serviceType === 'transfers' && tripType === 'return' && (
+                                                <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                                                    {/* Return Date */}
+                                                    <div className="group relative">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                <div className="p-0.5 sm:p-1 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-md border border-purple-200">
+                                                                    <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-purple-600" />
+                                                                </div>
+                                                                Return Date
+                                                            </label>
+                                                            {isDateWithin12Hours(returnDate) && (
+                                                                <span className="text-[9px] sm:text-[10px] text-red-600 font-medium">*12h</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowReturnDatePicker(!showReturnDatePicker)}
+                                                                className="relative w-full py-2 sm:py-2.5 px-2 sm:px-3 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
+                                                            >
+                                                                <div className="text-gray-700 font-medium text-[10px] sm:text-xs">
+                                                                    {formatDateWithOrdinal(returnDate)}
+                                                                </div>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Return Date Picker */}
+                                                        {showReturnDatePicker && (
+                                                            <div className="absolute top-full left-0 right-0 mt-1 sm:mt-2 bg-white rounded-xl sm:rounded-2xl shadow-2xl border border-gray-200 p-3 sm:p-4 z-50 animate-slideDown min-w-[240px] sm:min-w-[280px]">
+                                                                <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                                                                    <button type="button" onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                                        </svg>
+                                                                    </button>
+                                                                    <div className="text-center">
+                                                                        <h3 className="text-sm sm:text-base font-bold text-gray-900">{monthNames[currentReturnMonth.getMonth()]} {currentReturnMonth.getFullYear()}</h3>
+                                                                    </div>
+                                                                    <button type="button" onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                                                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                                <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                                                                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                                                                        <div key={day} className="text-center text-[10px] sm:text-xs font-semibold text-gray-500 py-1.5">{day}</div>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="grid grid-cols-7 gap-1.5">
+                                                                    {returnCalendarDays.map((date, index) => {
+                                                                        if (!date) return <div key={`empty-${index}`} className="aspect-square" />;
+                                                                        const isToday = date.toDateString() === new Date().toDateString();
+                                                                        const isPast = isPastDate(date);
+                                                                        const isWithin12Hours = isDateWithin12Hours(date);
+                                                                        const isBefore = isBeforeDeparture(date);
+                                                                        const isSelected = isDateSelected(date, 'return');
+                                                                        return (
+                                                                            <button key={index} type="button" onClick={() => !isPast && !isWithin12Hours && !isBefore && handleReturnDateClick(date)} disabled={isPast || isWithin12Hours || isBefore}
+                                                                                className={`aspect-square rounded-md text-[11px] sm:text-xs font-medium transition-all duration-200 ${isPast || isWithin12Hours || isBefore ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-purple-50 cursor-pointer'} ${isSelected ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105' : 'text-gray-700'} ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}`}
+                                                                                title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after departure date' : ''}>
+                                                                                {date.getDate()}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+                                                                    <button type="button" onClick={() => { const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1); handleReturnDateClick(nextDay); }} className="text-[11px] sm:text-xs text-purple-600 hover:text-purple-700 font-semibold">Next Day</button>
+                                                                    <button type="button" onClick={() => setShowReturnDatePicker(false)} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-[11px] sm:text-xs font-semibold">Done</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Return Time */}
+                                                    <div className="group">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                                <div className="p-0.5 sm:p-1 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-md border border-blue-200">
+                                                                    <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-600" />
+                                                                </div>
+                                                                Return Time
+                                                            </label>
+                                                        </div>
+                                                        <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                            <select value={returnTime} onChange={(e) => handleReturnTimeChange(e.target.value)} className="relative w-full py-2 sm:py-2.5 px-2 sm:px-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-gray-700 text-[10px] sm:text-xs transition-all duration-200 appearance-none cursor-pointer font-medium">
+                                                                {returnTimeSlots.length > 0 ? returnTimeSlots.map((time) => (<option key={time} value={time}>{formatTime12Hour(time)}</option>)) : (<option value="">No available times</option>)}
+                                                            </select>
+                                                            <div className="absolute right-2 sm:right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+                                                        {returnTimeSlots.length === 0 && (
+                                                            <p className="text-[9px] sm:text-[10px] text-red-600 mt-1">No available times for today. Please select a future date.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Number of Passengers */}
+                                            <div className="group">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                        <div className="p-0.5 sm:p-1 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-md border border-green-200">
+                                                            <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
+                                                        </div>
+                                                        <span className="hidden sm:inline">Number of Passengers</span>
+                                                        <span className="sm:hidden">Passengers</span>
+                                                    </label>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                                    <button type="button" onClick={() => setNumberOfPersons(Math.max(1, numberOfPersons - 1))} className="w-8 h-8 sm:w-10 sm:h-10 bg-white border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-base sm:text-lg text-gray-700 hover:text-green-600">−</button>
+                                                    <div className="flex-1 text-center">
+                                                        <div className="text-xl sm:text-2xl font-bold text-gray-900">{numberOfPersons}</div>
+                                                        <div className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5">{numberOfPersons === 1 ? 'Passenger' : 'Passengers'}</div>
+                                                    </div>
+                                                    <button type="button" onClick={() => setNumberOfPersons(Math.min(50, numberOfPersons + 1))} className="w-8 h-8 sm:w-10 sm:h-10 bg-white border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-base sm:text-lg text-gray-700 hover:text-green-600">+</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* STEP 3: Contact Information */}
+                                    {currentStep === 3 && (
+                                        <div className="space-y-2 sm:space-y-3 animate-fadeIn">
+                                            {/* Name Input */}
+                                            <div className="group">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                        <div className="p-0.5 sm:p-1 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-md border border-indigo-200">
+                                                            <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-indigo-600" />
+                                                        </div>
+                                                        Full Name
+                                                    </label>
+                                                </div>
+                                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                    <input type="text" placeholder="Enter your full name" value={contactName} onChange={(e) => setContactName(e.target.value)} required className="relative w-full py-2 sm:py-2.5 pl-8 sm:pl-9 pr-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-xs sm:text-sm text-gray-700 placeholder-gray-400 transition-all duration-200" />
+                                                    <User className="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200" />
+                                                </div>
+                                            </div>
+
+                                            {/* Email Input */}
+                                            <div className="group">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                        <div className="p-0.5 sm:p-1 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-md border border-blue-200">
+                                                            <Mail className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-600" />
+                                                        </div>
+                                                        Email Address
+                                                    </label>
+                                                </div>
+                                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                    <input type="email" placeholder="your.email@example.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required className="relative w-full py-2 sm:py-2.5 pl-8 sm:pl-9 pr-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-gray-700 placeholder-gray-400 transition-all duration-200" />
+                                                    <Mail className="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
+                                                </div>
+                                            </div>
+
+                                            {/* Phone Input with Country Code */}
+                                            <div className="group">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <label className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-gray-700">
+                                                        <div className="p-0.5 sm:p-1 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-md border border-green-200">
+                                                            <Phone className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
+                                                        </div>
+                                                        Phone Number
+                                                    </label>
+                                                </div>
+                                                <div className="relative flex gap-1.5 sm:gap-2 transform transition-all duration-200 group-hover:scale-[1.01]">
+                                                    {/* Country Code Dropdown */}
+                                                    <div className="relative" ref={countryDropdownRef}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                                                            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-2 sm:py-2.5 bg-white border-2 border-gray-200 rounded-lg hover:border-green-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all duration-200"
+                                                        >
+                                                            {/* <span className="text-xs sm:text-sm font-medium text-gray-700">{countryCodes.find(c => c.code === countryCode)?.flag}</span> */}
+                                                            <span className="text-xs sm:text-sm font-medium text-gray-700">{countryCode}</span>
+                                                            <ChevronDown className="h-3 w-3 text-gray-400" />
+                                                        </button>
+
+                                                        {/* Country Dropdown */}
+                                                        {showCountryDropdown && (
+                                                            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-2 z-50 animate-slideDown max-h-[300px] overflow-y-auto">
+
+                                                                {countryCodes.map((country) => (
+                                                                    <button
+                                                                        key={country.code}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setCountryCode(country.code);
+                                                                            setShowCountryDropdown(false);
+                                                                        }}
+                                                                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-green-50 transition-colors text-left"
+                                                                    >
+                                                                        <span className="text-base">{country.flag}</span>
+                                                                        {/* <span className="text-xs font-medium text-gray-700 flex-1">{country.country}</span> */}
+                                                                        <span className="text-[10px] sm:text-xs font-medium text-gray-500">{country.code}</span>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Phone Number Input */}
+                                                    <div className="relative flex-1">
+                                                        <input
+                                                            type="tel"
+                                                            placeholder="501234567"
+                                                            value={contactPhone}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value.replace(/\D/g, '');
+                                                                setContactPhone(value);
                                                             }}
-                                                            className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
-                                                        >
-                                                            Tomorrow
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowDatePicker(false)}
-                                                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
-                                                        >
-                                                            Done
-                                                        </button>
+                                                            required
+                                                            className="w-full py-2 sm:py-2.5 pl-8 sm:pl-9 pr-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 text-xs sm:text-sm text-gray-700 placeholder-gray-400 transition-all duration-200"
+                                                        />
+                                                        <Phone className="absolute left-2 sm:left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 group-hover:text-green-500 transition-colors duration-200" />
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        {/* Pickup Time Selection */}
-                                        <div className="group">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                    <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
-                                                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                                                    </div>
-                                                    <span className="hidden sm:inline">Pickup Time</span>
-                                                    <span className="sm:hidden">Time</span>
-                                                </label>
-                                            </div>
-                                            <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                <select
-                                                    value={selectedTime}
-                                                    onChange={(e) => handlePickupTimeChange(e.target.value)}
-                                                    className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium"
-                                                >
-                                                    {pickupTimeSlots.length > 0 ? (
-                                                        pickupTimeSlots.map((time) => (
-                                                            <option key={time} value={time}>
-                                                                {formatTime12Hour(time)}
-                                                            </option>
-                                                        ))
-                                                    ) : (
-                                                        <option value="">No available times</option>
-                                                    )}
-                                                </select>
-                                                <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                            {pickupTimeSlots.length === 0 && (
-                                                <p className="text-xs text-red-600 mt-1">
-                                                    No available times for today. Please select a future date.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Dropoff Date and Time Row - Only for Daily Rental */}
-                                    {serviceType === 'daily-rental' && (
-                                        <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                            {/* Dropoff Date */}
-                                            <div className="group relative">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-200">
-                                                            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                                                        </div>
-                                                        <span className="hidden sm:inline">Dropoff Date</span>
-                                                        <span className="sm:hidden">Dropoff</span>
-                                                    </label>
-                                                    {isDateWithin12Hours(dropoffDate) && (
-                                                        <span className="text-xs text-red-600 font-medium">
-                                                            *12h
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowDropoffDatePicker(!showDropoffDatePicker)}
-                                                        className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 transition-all duration-200 cursor-pointer text-left"
-                                                    >
-                                                        <div className="text-gray-700 font-medium text-xs sm:text-sm">
-                                                            {formatDateWithOrdinal(dropoffDate)}
-                                                        </div>
-                                                    </button>
-                                                </div>
-
-                                                {/* Dropoff Date Picker Dropdown */}
-                                                {showDropoffDatePicker && (
-                                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 z-50 animate-slideDown min-w-[280px] sm:min-w-[300px]">
-                                                        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() - 1, 1))}
-                                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                            >
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                                </svg>
-                                                            </button>
-
-                                                            <div className="text-center">
-                                                                <h3 className="text-lg font-bold text-gray-900">
-                                                                    {monthNames[currentDropoffMonth.getMonth()]} {currentDropoffMonth.getFullYear()}
-                                                                </h3>
-                                                            </div>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCurrentDropoffMonth(new Date(currentDropoffMonth.getFullYear(), currentDropoffMonth.getMonth() + 1, 1))}
-                                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                            >
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-7 gap-2 mb-2">
-                                                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                                <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
-                                                                    {day}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        <div className="grid grid-cols-7 gap-2">
-                                                            {dropoffCalendarDays.map((date, index) => {
-                                                                if (!date) {
-                                                                    return <div key={`empty-${index}`} className="aspect-square" />;
-                                                                }
-
-                                                                const isToday = date.toDateString() === new Date().toDateString();
-                                                                const isPast = isPastDate(date);
-                                                                const isWithin12Hours = isDateWithin12Hours(date);
-                                                                const isBefore = isBeforeDeparture(date);
-                                                                const isSelected = isDateSelected(date, 'dropoff');
-
-                                                                return (
-                                                                    <button
-                                                                        key={index}
-                                                                        type="button"
-                                                                        onClick={() => !isPast && !isWithin12Hours && !isBefore && handleDropoffDateClick(date)}
-                                                                        disabled={isPast || isWithin12Hours || isBefore}
-                                                                        className={`
-                                                                    aspect-square rounded-lg text-sm font-medium transition-all duration-200
-                                                                    ${isPast || isWithin12Hours || isBefore
-                                                                                ? 'text-gray-300 cursor-not-allowed'
-                                                                                : 'hover:bg-green-50 cursor-pointer'
-                                                                            }
-                                                                    ${isSelected
-                                                                                ? 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg scale-105'
-                                                                                : 'text-gray-700'
-                                                                            }
-                                                                    ${isToday && !isSelected ? 'border-2 border-green-500' : ''}
-                                                                `}
-                                                                        title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after pickup date' : ''}
-                                                                    >
-                                                                        {date.getDate()}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-
-                                                        <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const nextDay = new Date(selectedDate);
-                                                                    nextDay.setDate(nextDay.getDate() + 1);
-                                                                    handleDropoffDateClick(nextDay);
-                                                                }}
-                                                                className="text-sm text-green-600 hover:text-green-700 font-semibold"
-                                                            >
-                                                                Next Day
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowDropoffDatePicker(false)}
-                                                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold"
-                                                            >
-                                                                Done
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Dropoff Time Selection */}
-                                            <div className="group">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                        <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-200">
-                                                            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                                                        </div>
-                                                        <span className="hidden sm:inline">Dropoff Time</span>
-                                                        <span className="sm:hidden">Time</span>
-                                                    </label>
-                                                </div>
-                                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                    <select
-                                                        value={dropoffTime}
-                                                        onChange={(e) => handleDropoffTimeChange(e.target.value)}
-                                                        className="relative w-full py-3 sm:py-4 px-3 sm:px-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/20 text-gray-700 text-xs sm:text-sm transition-all duration-200 appearance-none cursor-pointer font-medium"
-                                                    >
-                                                        {dropoffTimeSlots.length > 0 ? (
-                                                            dropoffTimeSlots.map((time) => (
-                                                                <option key={time} value={time}>
-                                                                    {formatTime12Hour(time)}
-                                                                </option>
-                                                            ))
-                                                        ) : (
-                                                            <option value="">No available times</option>
-                                                        )}
-                                                    </select>
-                                                    <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                                        </svg>
-                                                    </div>
-                                                </div>
-                                                {dropoffTimeSlots.length === 0 && (
-                                                    <p className="text-xs text-red-600 mt-1">
-                                                        No available times for today. Please select a future date.
-                                                    </p>
-                                                )}
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Return Date and Time - Only for transfers return trips */}
-                                    {serviceType === 'transfers' && tripType === 'return' && (
-                                        <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                                            {/* Return Date */}
-                                            <div className="group relative">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                                        <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-lg border border-purple-200">
-                                                            <Calendar className="h-4 w-4 text-purple-600" />
-                                                        </div>
-                                                        Return Date
-                                                    </label>
-                                                    {isDateWithin12Hours(returnDate) && (
-                                                        <span className="text-xs text-red-600 font-medium">
-                                                            *12h
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowReturnDatePicker(!showReturnDatePicker)}
-                                                        className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-200 cursor-pointer text-left"
-                                                    >
-                                                        <div className="text-gray-700 font-medium text-sm">
-                                                            {formatDateWithOrdinal(returnDate)}
-                                                        </div>
-                                                    </button>
-                                                </div>
+                                    {/* Navigation Buttons */}
+                                    <div className="flex gap-2 sm:gap-3 pt-1.5 sm:pt-2">
+                                        {currentStep > 1 && (
+                                            <button type="button" onClick={handlePrevStep} className="flex-1 py-2 sm:py-2.5 px-3 sm:px-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-all duration-200 flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                                                <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                <span>Back</span>
+                                            </button>
+                                        )}
 
-                                                {/* Return Date Picker Dropdown */}
-                                                {showReturnDatePicker && (
-                                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-slideDown min-w-[300px]">
-                                                        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() - 1, 1))}
-                                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                            >
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                                </svg>
-                                                            </button>
-
-                                                            <div className="text-center">
-                                                                <h3 className="text-lg font-bold text-gray-900">
-                                                                    {monthNames[currentReturnMonth.getMonth()]} {currentReturnMonth.getFullYear()}
-                                                                </h3>
-                                                            </div>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setCurrentReturnMonth(new Date(currentReturnMonth.getFullYear(), currentReturnMonth.getMonth() + 1, 1))}
-                                                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                            >
-                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-7 gap-2 mb-2">
-                                                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                                                                <div key={day} className="text-center text-xs font-semibold text-gray-500 py-2">
-                                                                    {day}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-
-                                                        <div className="grid grid-cols-7 gap-2">
-                                                            {returnCalendarDays.map((date, index) => {
-                                                                if (!date) {
-                                                                    return <div key={`empty-${index}`} className="aspect-square" />;
-                                                                }
-
-                                                                const isToday = date.toDateString() === new Date().toDateString();
-                                                                const isPast = isPastDate(date);
-                                                                const isWithin12Hours = isDateWithin12Hours(date);
-                                                                const isBefore = isBeforeDeparture(date);
-                                                                const isSelected = isDateSelected(date, 'return');
-
-                                                                return (
-                                                                    <button
-                                                                        key={index}
-                                                                        type="button"
-                                                                        onClick={() => !isPast && !isWithin12Hours && !isBefore && handleReturnDateClick(date)}
-                                                                        disabled={isPast || isWithin12Hours || isBefore}
-                                                                        className={`
-                                                                    aspect-square rounded-lg text-sm font-medium transition-all duration-200
-                                                                    ${isPast || isWithin12Hours || isBefore
-                                                                                ? 'text-gray-300 cursor-not-allowed'
-                                                                                : 'hover:bg-purple-50 cursor-pointer'
-                                                                            }
-                                                                    ${isSelected
-                                                                                ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-105'
-                                                                                : 'text-gray-700'
-                                                                            }
-                                                                    ${isToday && !isSelected ? 'border-2 border-purple-500' : ''}
-                                                                `}
-                                                                        title={isWithin12Hours ? 'Must be at least 12 hours from now' : isBefore ? 'Must be after departure date' : ''}
-                                                                    >
-                                                                        {date.getDate()}
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-
-                                                        <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const nextDay = new Date(selectedDate);
-                                                                    nextDay.setDate(nextDay.getDate() + 1);
-                                                                    handleReturnDateClick(nextDay);
-                                                                }}
-                                                                className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
-                                                            >
-                                                                Next Day
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowReturnDatePicker(false)}
-                                                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold"
-                                                            >
-                                                                Done
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {/* Return Time */}
-                                            <div className="group">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                                        <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-200">
-                                                            <Clock className="h-4 w-4 text-blue-600" />
-                                                        </div>
-                                                        Return Time
-                                                    </label>
-                                                </div>
-                                                <div className="relative transform transition-all duration-200 group-hover:scale-[1.01]">
-                                                    <select
-                                                        value={returnTime}
-                                                        onChange={(e) => handleReturnTimeChange(e.target.value)}
-                                                        className="relative w-full py-4 px-4 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 text-gray-700 transition-all duration-200 appearance-none cursor-pointer font-medium text-sm"
-                                                    >
-                                                        {returnTimeSlots.length > 0 ? (
-                                                            returnTimeSlots.map((time) => (
-                                                                <option key={time} value={time}>
-                                                                    {formatTime12Hour(time)}
-                                                                </option>
-                                                            ))
-                                                        ) : (
-                                                            <option value="">No available times</option>
-                                                        )}
-                                                    </select>
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                        {currentStep < totalSteps ? (
+                                            <button type="button" onClick={handleNextStep} className={`${currentStep > 1 ? 'flex-1' : 'w-full'} bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-1.5 text-xs sm:text-sm`}>
+                                                <span>Next</span>
+                                                <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                                            </button>
+                                        ) : (
+                                            <button type="submit" disabled={!contactName || !contactEmail || !contactPhone || isSendingEmail} className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg hover:shadow-lg hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                                                {isSendingEmail ? (
+                                                    <>
+                                                        <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white"></div>
+                                                        <span>Sending...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                                         </svg>
-                                                    </div>
-                                                </div>
-                                                {returnTimeSlots.length === 0 && (
-                                                    <p className="text-xs text-red-600 mt-1">
-                                                        No available times for today. Please select a future date.
-                                                    </p>
+                                                        <span>{serviceType === 'transfers' ? 'Search Rides' : 'View Cars'}</span>
+                                                    </>
                                                 )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Number of Persons */}
-                                    <div className="group">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-gray-700">
-                                                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-200">
-                                                    <Users className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                                                </div>
-                                                <span className="hidden sm:inline">Number of Passengers</span>
-                                                <span className="sm:hidden">Passengers</span>
-                                            </label>
-                                        </div>
-                                        <div className="flex items-center gap-2 sm:gap-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => setNumberOfPersons(Math.max(1, numberOfPersons - 1))}
-                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-lg sm:text-xl text-gray-700 hover:text-green-600"
-                                            >
-                                                −
                                             </button>
-                                            <div className="flex-1 text-center">
-                                                <div className="text-2xl sm:text-3xl font-bold text-gray-900">{numberOfPersons}</div>
-                                                <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
-                                                    {numberOfPersons === 1 ? 'Passenger' : 'Passengers'}
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setNumberOfPersons(Math.min(50, numberOfPersons + 1))}
-                                                className="w-10 h-10 sm:w-12 sm:h-12 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-200 flex items-center justify-center font-bold text-lg sm:text-xl text-gray-700 hover:text-green-600"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Search Button */}
-                                    <div className="pt-1">
-                                        <button
-                                            type="submit"
-                                            className="group relative w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-3.5 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl hover:shadow-2xl hover:shadow-orange-500/30 hover:scale-[1.02] transition-all duration-300 overflow-hidden"
-                                        >
-                                            <div className="absolute inset-0 translate-x-full group-hover:translate-x-0 transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-
-                                            <div className="relative flex items-center justify-center gap-2 sm:gap-3">
-                                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                                </svg>
-                                                <span className="text-base sm:text-lg">
-                                                    {serviceType === 'transfers' ? 'Search Available Rides' : 'View Available Cars'}
-                                                </span>
-                                            </div>
-                                        </button>
+                                        )}
                                     </div>
                                 </form>
                             </div>
 
                             {/* Trust indicators */}
-                            <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-100 max-w-lg lg:mx-0 mx-auto px-4 sm:px-0">
+                            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 max-w-lg lg:mx-0 mx-auto px-3 sm:px-0">
                                 <div className="flex items-center justify-center sm:justify-between">
-                                    <div className="flex items-center gap-2 sm:gap-3">
-                                        <div className="flex -space-x-2">
+                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                        <div className="flex -space-x-1.5 sm:-space-x-2">
                                             {[1, 2, 3, 4].map((i) => (
-                                                <div key={i} className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full border-2 border-white"></div>
+                                                <div key={i} className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full border-2 border-white"></div>
                                             ))}
                                         </div>
                                         <div>
-                                            <div className="text-xs sm:text-sm font-semibold text-gray-900">2,500+ Happy Riders</div>
-                                            <div className="text-[10px] sm:text-xs text-gray-500">Booked this month</div>
+                                            <div className="text-[10px] sm:text-xs font-semibold text-gray-900">2,500+ Happy Riders</div>
+                                            <div className="text-[8px] sm:text-[10px] text-gray-500">Booked this month</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Right Column - Features */}
                         <div className="hidden lg:flex flex-col justify-start h-full order-1 lg:order-2 pt-0">
                             <div className="w-full relative">
                                 <div className="relative space-y-8">
                                     <div className="text-center">
                                         <h2 className="text-5xl xl:text-6xl 2xl:text-7xl font-black mb-4 leading-[1.1]">
-                                            <span className="block text-white mb-2">
-                                                Make Your
-                                            </span>
-                                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500">
-                                                Ride Perfect
-                                            </span>
+                                            <span className="block text-white mb-2">Make Your</span>
+                                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500">Ride Perfect</span>
                                         </h2>
                                     </div>
-
                                     <p className="text-xl xl:text-2xl text-white text-center leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)] font-semibold px-4">
                                         <span className="block mt-2 text-white/95">Book your perfect ride in just a few clicks.</span>
                                     </p>
-
                                     <div className="space-y-5 pt-4 flex flex-col items-start mx-auto" style={{ width: 'fit-content' }}>
-                                        <div className="group flex items-center gap-4 transform hover:scale-105 transition-all duration-300">
-                                            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-2xl group-hover:shadow-orange-500/50 transition-all duration-300">
-                                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
+                                        {[
+                                            { icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", text: "24/7 Available Service" },
+                                            { icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z", text: "Professional Drivers" },
+                                            { icon: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z", text: "All Over UAE" },
+                                            { icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z", text: "Low Price Guaranteed" }
+                                        ].map((feature, idx) => (
+                                            <div key={idx} className="group flex items-center gap-4 transform hover:scale-105 transition-all duration-300">
+                                                <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-2xl group-hover:shadow-orange-500/50 transition-all duration-300">
+                                                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={feature.icon} />
+                                                    </svg>
+                                                </div>
+                                                <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">{feature.text}</span>
                                             </div>
-                                            <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">
-                                                24/7 Available Service
-                                            </span>
-                                        </div>
-
-                                        <div className="group flex items-center gap-4 transform hover:scale-105 transition-all duration-300">
-                                            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-2xl group-hover:shadow-orange-500/50 transition-all duration-300">
-                                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                </svg>
-                                            </div>
-                                            <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">
-                                                Professional Drivers
-                                            </span>
-                                        </div>
-
-                                        <div className="group flex items-center gap-4 transform hover:scale-105 transition-all duration-300">
-                                            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-2xl group-hover:shadow-orange-500/50 transition-all duration-300">
-                                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                </svg>
-                                            </div>
-                                            <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">
-                                                All Over UAE
-                                            </span>
-                                        </div>
-                                        <div className="group flex items-center gap-4 transform hover:scale-105 transition-all duration-300">
-                                            <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-2xl group-hover:shadow-orange-500/50 transition-all duration-300">
-                                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </div>
-                                            <span className="text-white text-xl xl:text-2xl font-bold drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)] whitespace-nowrap">
-                                                Low Price Guaranteed
-                                            </span>
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>

@@ -74,11 +74,10 @@ export const isPastDate = (date: Date) => {
 };
 
 // Generate time slots with 12-hour restriction
-export const generateTimeSlots = (date: Date, isReturnTime = false) => {
+export const generateTimeSlots = (date: Date) => {
     const times: string[] = [];
     const now = new Date();
     const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-    console.log("isReturnTime", isReturnTime);
 
     // Check if selected date is today or in the future
     const isToday = date.toDateString() === now.toDateString();
